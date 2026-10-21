@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="theme-color" content="#111111">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Bomb Manual">
+  <meta name="format-detection" content="telephone=no">
+  <title>BOMB DEFUSAL MANUAL — OPERATION: THREE WISE MONKEYS</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 1.2cm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: "Courier New", Courier, monospace;
+      color: #111;
+      background: #f7f9fa;
+      line-height: 1.38;
+      font-size: 10.5pt;
+    }
+
+    .page {
+      page-break-after: always;
+      position: relative;
+      min-height: 96vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 3px double #111;
+      background: #fff;
+      padding: 1.4rem;
+      margin: 0 auto 1.5rem auto;
+      max-width: 900px;
+    }
+
+    .doc-header {
+      border-bottom: 2px solid #111;
+      padding-bottom: 0.45rem;
+      margin-bottom: 0.8rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .stamp {
+      border: 3px solid #b30000;
+      color: #b30000;
+      font-weight: 900;
+      font-size: 1rem;
+      padding: 0.15rem 0.55rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      transform: rotate(-2deg);
+      display: inline-block;
+    }
+
+    .header-meta {
+      text-align: right;
+      font-size: 8pt;
+      font-weight: bold;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 0.25rem;
+      text-align: center;
+      border-bottom: 1px dashed #444;
+      padding-bottom: 0.4rem;
+    }
+
+    h2 {
+      font-size: 1.15rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 0.6rem 0 0.4rem 0;
+      background: #111;
+      color: #fff;
+      padding: 0.25rem 0.55rem;
+    }
+
+    h3 {
+      font-size: 0.98rem;
+      text-transform: uppercase;
+      margin: 0.55rem 0 0.25rem 0;
+      border-bottom: 1px solid #333;
+      padding-bottom: 2px;
+    }
+
+    p, ul, ol {
+      margin-bottom: 0.45rem;
+    }
+
+    ul, ol {
+      padding-left: 1.4rem;
+    }
+
+    li {
+      margin-bottom: 0.25rem;
+    }
+
+    .schematic-box {
+      border: 1.5px solid #111;
+      background: #f9f9f9;
+      padding: 0.6rem;
+      margin: 0.45rem 0;
+      font-family: "Courier New", monospace;
+      font-size: 8.5pt;
+      white-space: pre;
+      line-height: 1.2;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .table-scroll {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0.45rem 0 0.7rem 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 9pt;
+      min-width: 460px;
+    }
+
+    th, td {
+      border: 1px solid #111;
+      padding: 0.35rem 0.5rem;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      background: #e6e6e6;
+      font-weight: 900;
+      text-transform: uppercase;
+    }
+
+    .rule-callout {
+      border-left: 5px solid #111;
+      background: #f2f2f2;
+      padding: 0.5rem 0.75rem;
+      margin: 0.45rem 0;
+      font-size: 9.5pt;
+    }
+
+    .warning-banner {
+      border: 2px dashed #b30000;
+      background: #fff5f5;
+      color: #900;
+      padding: 0.45rem;
+      margin: 0.45rem 0;
+      font-weight: bold;
+      font-size: 9pt;
+      text-align: center;
+    }
+
+    .doc-footer {
+      border-top: 1px solid #111;
+      padding-top: 0.35rem;
+      font-size: 8pt;
+      display: flex;
+      justify-content: space-between;
+      color: #333;
+      font-weight: bold;
+    }
+
+    /* Top Sticky Navigation Bar */
+    .print-bar {
+      background: #111;
+      color: #fff;
+      padding: 0.75rem 1.2rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .print-bar-row1 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .print-bar-links {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .manual-nav-pill {
+      background: #1c2430;
+      color: #00e5ff;
+      border: 1px solid #00d2ff;
+      padding: 0.35rem 0.75rem;
+      border-radius: 4px;
+      font-size: 0.78rem;
+      font-weight: bold;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      min-height: 38px;
+    }
+
+    .print-btn {
+      background: #00e676;
+      color: #000;
+      border: none;
+      padding: 0.45rem 1.1rem;
+      font-weight: 900;
+      font-family: inherit;
+      cursor: pointer;
+      border-radius: 4px;
+      font-size: 0.88rem;
+      min-height: 38px;
+      touch-action: manipulation;
+    }
+
+    .section-jump-row {
+      display: flex;
+      gap: 0.45rem;
+      align-items: center;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 3px;
+    }
+
+    .section-jump-pill {
+      background: #222;
+      color: #cbd5e1;
+      border: 1px solid #444;
+      padding: 0.3rem 0.65rem;
+      border-radius: 4px;
+      font-size: 0.74rem;
+      text-decoration: none;
+      white-space: nowrap;
+      font-family: inherit;
+      min-height: 34px;
+      display: inline-flex;
+      align-items: center;
+      touch-action: manipulation;
+    }
+
+    .section-jump-pill:active {
+      background: #333;
+      border-color: #00e676;
+      color: #00e676;
+    }
+
+    /* Mobile Float Back To Top */
+    .back-to-top {
+      position: fixed;
+      bottom: max(1rem, env(safe-area-inset-bottom));
+      right: max(1rem, env(safe-area-inset-right));
+      background: #111;
+      color: #fff;
+      border: 1px solid #444;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-weight: bold;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+      z-index: 900;
+      font-size: 1.2rem;
+      touch-action: manipulation;
+    }
+
+    @media screen and (max-width: 860px) {
+      body {
+        background: #eef2f5;
+        padding-bottom: 2rem;
+      }
+      .page {
+        margin: 0.75rem 0.5rem 1.25rem 0.5rem;
+        padding: 1rem 0.8rem;
+        min-height: auto;
+        border: 2px solid #222;
+        border-radius: 6px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+      }
+      h1 {
+        font-size: 1.35rem;
+        letter-spacing: 1px;
+      }
+      h2 {
+        font-size: 1.05rem;
+      }
+      .stamp {
+        font-size: 0.82rem;
+      }
+      .header-meta {
+        font-size: 7pt;
+      }
+      .schematic-box {
+        font-size: clamp(6.8pt, 2.3vw, 8.5pt);
+        padding: 0.45rem;
+      }
+    }
+
+    @media print {
+      .print-bar, .back-to-top { display: none !important; }
+      body { background: transparent !important; }
+      .page {
+        margin: 0 !important;
+        min-height: 98vh !important;
+        border: 2px solid #000 !important;
+        page-break-after: always !important;
+        box-shadow: none !important;
+      }
+    }
+  </style>
+</head>
+<body id="top">
+
+  <div class="print-bar">
+    <div class="print-bar-row1">
+      <div class="print-bar-links">
+        <span style="font-weight:bold; font-size:0.85rem; color:#fff;">📖 DEFUSAL MANUAL</span>
+        <a href="index.html" class="manual-nav-pill">⏱️ TIMER</a>
+        <a href="bomb_3d_schematic.html" class="manual-nav-pill">📐 3D CAD</a>
+      </div>
+      <button class="print-btn" onclick="window.print()">🖨️ PRINT (PDF)</button>
+    </div>
+    <div class="section-jump-row">
+      <span style="font-size:0.72rem; color:#94a3b8; margin-right:0.2rem;">JUMP:</span>
+      <a href="#sec-casing" class="section-jump-pill">§0 CASING</a>
+      <a href="#sec-wires" class="section-jump-pill">§1 WIRES</a>
+      <a href="#sec-dials" class="section-jump-pill">§2 DIALS</a>
+      <a href="#sec-switches" class="section-jump-pill">§3 SWITCHES</a>
+      <a href="#sec-gm" class="section-jump-pill" style="border-color:#ffaa00; color:#ffaa00;">§4 GM KEY</a>
+    </div>
+  </div>
+
+  <a href="#top" class="back-to-top" title="Back to top">↑</a>
+
+  <!-- ===================================================================
+       PAGE 1: ORDNANCE OVERVIEW & CASING INSPECTION
+       =================================================================== -->
+  <div class="page" id="sec-casing">
+    <div>
+      <div class="doc-header">
+        <span class="stamp">CLASSIFIED // LEVEL 4</span>
+        <div class="header-meta">
+          DOCUMENT REF: TWM-DEF-884<br>
+          ORDNANCE DEFUSAL DOSSIER
+        </div>
+      </div>
+
+      <h1>BOMB DEFUSAL MANUAL</h1>
+      <p style="text-align: center; font-weight: bold; margin-bottom: 0.6rem;">OPERATION: THREE WISE MONKEYS // FIELD SPECIFICATION v3.4</p>
+
+      <div class="warning-banner">
+        STRICT COMMUNICATIONS PROTOCOL:<br>
+        1. MUTE OPERATOR: ZERO VOCAL SOUNDS, NO SIGN LANGUAGE (ASL), NO AIR-SPELLING.<br>
+        2. NO FINGER COUNTING FOR SLOTS: YOU MUST MIME ACTUAL TEXTURES & SHAPES!
+      </div>
+
+      <h2>SECTION 0: EXTERIOR CASING & MYSTERY CHAMBER</h2>
+      <p>Before attempting to disarm any module, cross-reference the four casing features below. Some features are only visible to the Deaf observer; others can only be felt by the Blind technician.</p>
+
+      <div class="schematic-box">
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  [SERIAL NUMBER] : [ A34-E9 ]          [BATTERY MOUNT] : [ (I) (I) ]│
+  │  [INDICATOR TAG] : [ LIT: FRK ]        [SIDE CHAMBER]  : [ OBJECT ] │
+  └─────────────────────────────────────────────────────────────────────┘</div>
+
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 25%;">CASING FEATURE</th>
+            <th style="width: 75%;">INSPECTION SPECIFICATION</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>SERIAL NUMBER</strong></td>
+            <td>A 6-character alphanumeric code on the casing exterior.<br>• Check whether it contains a <strong>VOWEL (A, E, I, O, U)</strong>.<br>• Check whether the <strong>FINAL DIGIT</strong> is <strong>ODD (1, 3, 5, 7, 9)</strong> or <strong>EVEN (0, 2, 4, 6, 8)</strong>.</td>
+          </tr>
+          <tr>
+            <td><strong>BATTERY MOUNT</strong></td>
+            <td>Count the total number of AA battery cells mounted to the side of the chassis (<strong>0, 1, or 2 Batteries</strong>).</td>
+          </tr>
+          <tr>
+            <td><strong>INDICATOR TAG</strong></td>
+            <td>Inspect the status label affixed to the chassis: either <strong>LIT: FRK</strong> or <strong>UNLIT: CAR</strong>.</td>
+          </tr>
+          <tr>
+            <td><strong>MYSTERY CHAMBER</strong></td>
+            <td>A curtained side access port containing <strong>one</strong> concealed object:<br>• <strong>METAL KEY</strong> (flat, notched teeth)<br>• <strong>AA BATTERY</strong> (smooth cylinder, raised terminal nub)<br>• <strong>SPIKY BALL</strong> (round, prickly rubber nubs)<br>• <strong>WOOD BLOCK</strong> (smooth flat faces, sharp corners)<br>• <strong>PADLOCK</strong> (heavy metal body with curved shackle loop)</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h2>DISARMING REQUIREMENTS & STRIKE PENALTIES</h2>
+      <div class="rule-callout">
+        The bomb is armed with a <strong>5:00 MINUTE</strong> timer and three active modules: <strong>Module 1 (Tactile Wires)</strong>, <strong>Module 2 (Shape Dials)</strong>, and <strong>Module 3 (Toggle Switches)</strong>.<br><br>
+        Modules may be disarmed in any sequence, provided all cross-referenced dependencies are satisfied. Any incorrect wire disconnection, dial alignment, switch state, or communication violation triggers a <strong>STRIKE</strong> and accelerates the timer. <strong>Three Strikes result in immediate detonation.</strong>
+      </div>
+    </div>
+
+    <div class="doc-footer">
+      <span>OPERATION: THREE WISE MONKEYS</span>
+      <span>PAGE 1 OF 4 (PLAYER DOSSIER)</span>
+      <span>RESTRICTED FIELD MANUAL</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       PAGE 2: MODULE 1 — MODULAR TACTILE WIRES
+       =================================================================== -->
+  <div class="page" id="sec-wires">
+    <div>
+      <div class="doc-header">
+        <span class="stamp">MODULE 1 // WIRES</span>
+        <div class="header-meta">SECTION: 01-WIR<br>TACTILE WIRE ARRAY</div>
+      </div>
+
+      <h2>MODULE 1: ON THE SUBJECT OF TACTILE WIRES</h2>
+      <p>Five horizontal colored wires are clipped across the chassis from <strong>Slot 1 (Top)</strong> to <strong>Slot 5 (Bottom)</strong>. Each wire slot is paired with a tactile texture badge on the left edge. Note that texture badges may be shuffled between slots on different bombs.</p>
+
+      <div class="schematic-box">
+  SLOT 1 (TOP)    ──► [ TEXTURE BADGE ]  📎════════( WIRE COLOR )════════📎
+  SLOT 2          ──► [ TEXTURE BADGE ]  📎════════( WIRE COLOR )════════📎
+  SLOT 3 (MIDDLE) ──► [ TEXTURE BADGE ]  📎════════( WIRE COLOR )════════📎
+  SLOT 4          ──► [ TEXTURE BADGE ]  📎════════( WIRE COLOR )════════📎
+  SLOT 5 (BOTTOM) ──► [ TEXTURE BADGE ]  📎════════( WIRE COLOR )════════📎
+
+  POSSIBLE TEXTURES: [SANDPAPER] · [BUBBLE WRAP] · [METAL COIN] · [SOFT FELT] · [RIBBED CARD]</div>
+
+      <div class="warning-banner">
+        ONLY ONE WIRE MAY BE DISCONNECTED.<br>
+        EVALUATE CONDITIONS 1 THROUGH 6 IN STRICT TOP-TO-BOTTOM ORDER.<br>
+        EXECUTE ONLY THE FIRST CONDITION THAT IS TRUE!
+      </div>
+
+      <h3>WIRE DISCONNECTION TABLE</h3>
+
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 14%;">PRIORITY</th>
+            <th style="width: 54%;">CONDITION</th>
+            <th style="width: 32%;">DISCONNECT TARGET</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>CONDITION 1</strong></td>
+            <td>If the Mystery Chamber contains a <strong>PADLOCK</strong> <u>AND</u> there is <strong>NO Black wire</strong> on the bomb:</td>
+            <td>Disconnect the wire beside the <strong>METAL COIN</strong> badge.</td>
+          </tr>
+          <tr>
+            <td><strong>CONDITION 2</strong></td>
+            <td>Otherwise, if the Serial Number contains a <strong>VOWEL</strong> <u>AND</u> a <strong>RED wire</strong> is present anywhere on the bomb:</td>
+            <td>Disconnect the wire beside the <strong>SANDPAPER</strong> badge.</td>
+          </tr>
+          <tr>
+            <td><strong>CONDITION 3</strong></td>
+            <td>Otherwise, if there are <strong>2 BATTERIES</strong> on the casing <u>AND</u> a <strong>YELLOW wire</strong> is present anywhere on the bomb:</td>
+            <td>Disconnect the wire beside the <strong>SOFT FELT</strong> badge.</td>
+          </tr>
+          <tr>
+            <td><strong>CONDITION 4</strong></td>
+            <td>Otherwise, if a <strong>WHITE wire</strong> is mounted in an <strong>ODD slot</strong> (Slot 1, Slot 3, or Slot 5):</td>
+            <td>Disconnect the wire beside the <strong>BUBBLE WRAP</strong> badge.</td>
+          </tr>
+          <tr>
+            <td><strong>CONDITION 5</strong></td>
+            <td>Otherwise, if the Mystery Chamber contains a <strong>METAL KEY</strong>:</td>
+            <td>Disconnect the wire beside the <strong>RIBBED CARD</strong> badge.</td>
+          </tr>
+          <tr>
+            <td><strong>CONDITION 6</strong></td>
+            <td>Otherwise, if <strong>none</strong> of Conditions 1–5 apply:</td>
+            <td>Disconnect the wire in <strong>SLOT 3 (Middle Slot)</strong>, regardless of its texture badge.</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="rule-callout">
+        <strong>ANTI-CHEAT NOTICE:</strong> The Mute operator may <strong>NOT</strong> hold up 1–5 fingers to indicate wire slot numbers. To identify a target wire, the Mute operator must pantomime the physical sensation of the target <strong>Texture Badge</strong> (or point to the middle for Condition 6).
+      </div>
+    </div>
+
+    <div class="doc-footer">
+      <span>OPERATION: THREE WISE MONKEYS</span>
+      <span>PAGE 2 OF 4 (PLAYER DOSSIER)</span>
+      <span>RESTRICTED FIELD MANUAL</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       PAGE 3: MODULE 2 — ROTATING SHAPE DIALS
+       =================================================================== -->
+  <div class="page" id="sec-dials">
+    <div>
+      <div class="doc-header">
+        <span class="stamp">MODULE 2 // DIALS</span>
+        <div class="header-meta">SECTION: 02-DIA<br>ROTATING SHAPE DIALS</div>
+      </div>
+
+      <h2>MODULE 2: ON THE SUBJECT OF SHAPE DIALS</h2>
+      <p>Three rotary dials are mounted on the upper casing, each marked with a raised 3D geometric shape: <strong>Triangle (▲)</strong>, <strong>Square (■)</strong>, and <strong>Circle (●)</strong>. Each dial must be rotated to one of four cardinal directions: <strong>UP, DOWN, LEFT, or RIGHT</strong>.</p>
+
+      <div class="schematic-box">
+                                ▲ UP
+                 ◄ LEFT     ( DIAL ROTOR )     RIGHT ►
+                               ▼ DOWN
+
+        [ ▲ TRIANGLE ]          [ ■ SQUARE ]          [ ● CIRCLE ]
+           (Dial 1)               (Dial 2)              (Dial 3)</div>
+
+      <p>Align <strong>Dial 1 (Triangle)</strong> and <strong>Dial 2 (Square)</strong> first, as <strong>Dial 3 (Circle)</strong> depends on their final alignments.</p>
+
+      <h3>DIAL 1: TRIANGLE ROTOR (▲)</h3>
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 68%;">EVALUATE TOP-TO-BOTTOM (FIRST TRUE CONDITION):</th>
+            <th style="width: 32%;">TARGET DIRECTION</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1. If the Mystery Chamber contains a <strong>SPIKY BALL</strong>:</td>
+            <td>Rotate <strong>UP (▲)</strong></td>
+          </tr>
+          <tr>
+            <td>2. Else, if the Indicator Tag displays <strong>LIT: FRK</strong>:</td>
+            <td>Rotate <strong>RIGHT (►)</strong></td>
+          </tr>
+          <tr>
+            <td>3. Else, if the Serial Number ends in an <strong>ODD DIGIT (1, 3, 5, 7, 9)</strong>:</td>
+            <td>Rotate <strong>LEFT (◄)</strong></td>
+          </tr>
+          <tr>
+            <td>4. Otherwise:</td>
+            <td>Rotate <strong>DOWN (▼)</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>DIAL 2: SQUARE ROTOR (■)</h3>
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 68%;">EVALUATE TOP-TO-BOTTOM (FIRST TRUE CONDITION):</th>
+            <th style="width: 32%;">TARGET DIRECTION</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1. If there is <strong>at least 1 BATTERY</strong> (1 or 2 Batteries) on the casing:</td>
+            <td>Rotate <strong>UP (▲)</strong></td>
+          </tr>
+          <tr>
+            <td>2. Else, if the Mystery Chamber contains a <strong>WOOD BLOCK</strong>:</td>
+            <td>Rotate <strong>LEFT (◄)</strong></td>
+          </tr>
+          <tr>
+            <td>3. Otherwise:</td>
+            <td>Rotate <strong>RIGHT (►)</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <h3>DIAL 3: CIRCLE ROTOR (●)</h3>
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 68%;">EVALUATE BASED ON DIAL 1 & DIAL 2 FINAL POSITIONS:</th>
+            <th style="width: 32%;">TARGET DIRECTION</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1. If the <strong>TRIANGLE DIAL</strong> is set to <strong>UP (▲)</strong>:</td>
+            <td>Rotate <strong>UP (▲)</strong></td>
+          </tr>
+          <tr>
+            <td>2. Else, if the <strong>SQUARE DIAL</strong> is set to <strong>UP (▲)</strong>:</td>
+            <td>Rotate <strong>LEFT (◄)</strong></td>
+          </tr>
+          <tr>
+            <td>3. Otherwise (neither Triangle nor Square points UP):</td>
+            <td>Rotate <strong>DOWN (▼)</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="doc-footer">
+      <span>OPERATION: THREE WISE MONKEYS</span>
+      <span>PAGE 3 OF 4 (PLAYER DOSSIER)</span>
+      <span>RESTRICTED FIELD MANUAL</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       PAGE 4: MODULE 3 — TOGGLE SWITCH MATRIX
+       =================================================================== -->
+  <div class="page" id="sec-switches">
+    <div>
+      <div class="doc-header">
+        <span class="stamp">MODULE 3 // SWITCHES</span>
+        <div class="header-meta">SECTION: 03-SWI<br>TOGGLE SWITCH MATRIX</div>
+      </div>
+
+      <h2>MODULE 3: ON THE SUBJECT OF TOGGLE SWITCHES</h2>
+      <p>Four vertical toggle switches are arranged in a horizontal bank, numbered <strong>Switch 1, Switch 2, Switch 3, and Switch 4</strong> from left to right. All four switches must be set to their correct final polarity (<strong>UP</strong> or <strong>DOWN</strong>).</p>
+
+      <div class="schematic-box">
+       LEFT                                                  RIGHT
+      ┌───────────┐     ┌───────────┐     ┌───────────┐     ┌───────────┐
+      │ SWITCH #1 │     │ SWITCH #2 │     │ SWITCH #3 │     │ SWITCH #4 │
+      │   ▲ UP    │     │   ▼ DOWN  │     │   ▼ DOWN  │     │   ▲ UP    │
+      └───────────┘     └───────────┘     └───────────┘     └───────────┘</div>
+
+      <h3>SWITCH POLARITY RULES (EVALUATE ALL FOUR SWITCHES)</h3>
+
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 18%;">SWITCH</th>
+            <th style="width: 52%;">SET TO "UP (▲)" IF...</th>
+            <th style="width: 30%;">SET TO "DOWN (▼)" IF...</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>SWITCH 1</strong></td>
+            <td>The Serial Number contains at least one <strong>VOWEL (A, E, I, O, U)</strong>.</td>
+            <td>The Serial Number contains <strong>no vowels</strong>.</td>
+          </tr>
+          <tr>
+            <td><strong>SWITCH 2</strong></td>
+            <td>The Mystery Chamber contains a <strong>METAL KEY</strong> or an <strong>AA BATTERY</strong>.</td>
+            <td>The Mystery Chamber contains a <strong>Spiky Ball, Wood Block, or Padlock</strong>.</td>
+          </tr>
+          <tr>
+            <td><strong>SWITCH 3</strong></td>
+            <td>There are <strong>0 BATTERIES</strong> on the casing <u>OR</u> the Indicator Tag reads <strong>UNLIT: CAR</strong>.</td>
+            <td>There is <strong>1 or 2 Batteries</strong> <u>AND</u> the Indicator Tag reads <strong>LIT: FRK</strong>.</td>
+          </tr>
+          <tr>
+            <td><strong>SWITCH 4</strong></td>
+            <td><strong>SWITCH 1</strong> is in the <strong>UP (▲)</strong> position.</td>
+            <td><strong>SWITCH 1</strong> is in the <strong>DOWN (▼)</strong> position.</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="rule-callout" style="margin-top: 1.2rem;">
+        <strong>FINAL ORDNANCE DISARMAMENT PROTOCOL:</strong><br>
+        Once the team is confident that:<br>
+        • The <strong>single correct wire</strong> has been detached (Module 1)<br>
+        • All <strong>three shape dials</strong> are aligned to their target directions (Module 2)<br>
+        • All <strong>four toggle switches</strong> are set to their target polarities (Module 3)<br><br>
+        The Deaf observer must call out: <strong>"BOMB DEFUSED!"</strong> so the Game Master can halt the countdown and verify the board.
+      </div>
+    </div>
+
+    <div class="doc-footer">
+      <span>OPERATION: THREE WISE MONKEYS</span>
+      <span>PAGE 4 OF 4 (PLAYER DOSSIER)</span>
+      <span>RESTRICTED FIELD MANUAL</span>
+    </div>
+  </div>
+
+  <!-- ===================================================================
+       PAGE 5: CONFIDENTIAL GAME MASTER SHEET (KEEP SEPARATE!)
+       =================================================================== -->
+  <div class="page" id="sec-gm">
+    <div>
+      <div class="doc-header">
+        <span class="stamp">CONFIDENTIAL // GM ONLY</span>
+        <div class="header-meta">SEPARATE FROM PLAYER MANUAL!<br>NEVER HAND PAGE 5 TO PLAYERS</div>
+      </div>
+
+      <h2>GAME MASTER SEED SETUP & SOLUTION KEY (SEEDS #01–#12)</h2>
+      <div class="warning-banner">
+        DETACH THIS SHEET! KEEP IT AT THE LAPTOP STATION.<br>
+        ONLY GIVE PAGES 1–4 TO THE MUTE PLAYER!
+      </div>
+
+      <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>SEED</th>
+            <th>SETUP: CLUES ON BOX</th>
+            <th>SETUP: WIRES (SLOTS 1 TO 5)</th>
+            <th>SOLUTION: WIRE</th>
+            <th>SOLUTION: DIALS & SW</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>#01<br>ALPHA</strong></td>
+            <td>SN: <code>A34-E9</code> | 2 Batt<br><code>LIT:FRK</code> | Box: <strong>KEY</strong></td>
+            <td>1:Red/Sand, 2:Blue/Bub, 3:Yel/Coin, 4:Grn/Felt, 5:Wht/Card</td>
+            <td><strong>Sandpaper</strong><br>(Slot 1 - Cond 2)</td>
+            <td>▲:<strong>R</strong> ■:<strong>U</strong> ●:<strong>L</strong><br>SW: <strong>U, U, D, U</strong></td>
+          </tr>
+          <tr>
+            <td><strong>#02<br>BRAVO</strong></td>
+            <td>SN: <code>B82-K4</code> | 1 Batt<br><code>UNLIT:CAR</code> | Box: <strong>BATTERY</strong></td>
+            <td>1:Blue/Felt, 2:Grn/Sand, 3:Wht/Bub, 4:Red/Card, 5:Yel/Coin</td>
+            <td><strong>Bubble Wrap</strong><br>(Slot 3 - Cond 4)</td>
+            <td>▲:<strong>D</strong> ■:<strong>U</strong> ●:<strong>L</strong><br>SW: <strong>D, U, U, D</strong></td>
+          </tr>
+          <tr>
+            <td><strong>#03<br>CHARLIE</strong></td>
+            <td>SN: <code>Z91-U3</code> | 0 Batt<br><code>LIT:FRK</code> | Box: <strong>PADLOCK</strong></td>
+            <td>1:Yel/Card, 2:Red/Coin, 3:Grn/Sand, 4:Blue/Bub, 5:Wht/Felt</td>
+            <td><strong>Metal Coin</strong><br>(Slot 2 - Cond 1)</td>
+            <td>▲:<strong>R</strong> ■:<strong>R</strong> ●:<strong>D</strong><br>SW: <strong>U, D, U, U</strong></td>
+          </tr>
+          <tr>
+            <td><strong>#04<br>DELTA</strong></td>
+            <td>SN: <code>H45-T8</code> | 2 Batt<br><code>UNLIT:CAR</code> | Box: <strong>WOOD BLOCK</strong></td>
+            <td>1:Grn/Bub, 2:Blk/Felt, 3:Red/Sand, 4:Yel/Coin, 5:Blue/Card</td>
+            <td><strong>Soft Felt</strong><br>(Slot 2 - Cond 3)</td>
+            <td>▲:<strong>D</strong> ■:<strong>U</strong> ●:<strong>L</strong><br>SW: <strong>D, D, U, D</strong></td>
+          </tr>
+          <tr>
+            <td><strong>#05<br>ECHO</strong></td>
+            <td>SN: <code>E12-O7</code> | 1 Batt<br><code>LIT:FRK</code> | Box: <strong>SPIKY BALL</strong></td>
+            <td>1:Wht/Coin, 2:Blue/Sand, 3:Grn/Card, 4:Red/Bub, 5:Blk/Felt</td>
+            <td><strong>Sandpaper</strong><br>(Slot 2 - Cond 2)</td>
+            <td>▲:<strong>U</strong> ■:<strong>U</strong> ●:<strong>U</strong><br>SW: <strong>U, D, D, U</strong></td>
+          </tr>
+          <tr>
+            <td><strong>#06<br>FOXTROT</strong></td>
+            <td>SN: <code>R77-X2</code> | 2 Batt<br><code>UNLIT:CAR</code> | Box: <strong>KEY</strong></td>
+            <td>1:Blk/Sand, 2:Yel/Bub, 3:Blue/Felt, 4:Grn/Coin, 5:Red/Card</td>
+            <td><strong>Soft Felt</strong><br>(Slot 3 - Cond 3)</td>
+            <td>▲:<strong>D</strong> ■:<strong>U</strong> ●:<strong>L</strong><br>SW: <strong>D, U, U, D</strong></td>
+          </tr>
+          <tr>
+            <td><strong>#07<br>GOLF</strong></td>
+            <td>SN: <code>I83-V5</code> | 0 Batt<br><code>UNLIT:CAR</code> | Box: <strong>BATTERY</strong></td>
+            <td>1:Red/Card, 2:Red/Bub, 3:Blue/Coin, 4:Yel/Sand, 5:Wht/Felt</td>
+            <td><strong>Sandpaper</strong><br>(Slot 4 - Cond 2)</td>
+            <td>▲:<strong>L</strong> ■:<strong>R</strong> ●:<strong>D</strong><br>SW: <strong>U, U, U, U</strong></td>
+          </tr>
+          <tr>
+            <td><strong>#08<br>HOTEL</strong></td>
+            <td>SN: <code>M52-W6</code> | 1 Batt<br><code>LIT:FRK</code> | Box: <strong>PADLOCK</strong></td>
+            <td>1:Blue/Coin, 2:Wht/Felt, 3:Red/Sand, 4:Grn/Bub, 5:Yel/Card</td>
+            <td><strong>Metal Coin</strong><br>(Slot 1 - Cond 1)</td>
+            <td>▲:<strong>R</strong> ■:<strong>U</strong> ●:<strong>L</strong><br>SW: <strong>D, D, D, D</strong></td>
+          </tr>
+          <tr>
+            <td><strong>#09<br>INDIA</strong></td>
+            <td>SN: <code>U99-Y1</code> | 2 Batt<br><code>LIT:FRK</code> | Box: <strong>WOOD BLOCK</strong></td>
+            <td>1:Grn/Card, 2:Yel/Sand, 3:Blue/Bub, 4:Wht/Coin, 5:Red/Felt</td>
+            <td><strong>Sandpaper</strong><br>(Slot 2 - Cond 2)</td>
+            <td>▲:<strong>R</strong> ■:<strong>U</strong> ●:<strong>L</strong><br>SW: <strong>U, D, D, U</strong></td>
+          </tr>
+          <tr>
+            <td><strong>#10<br>JULIET</strong></td>
+            <td>SN: <code>C31-D4</code> | 0 Batt<br><code>UNLIT:CAR</code> | Box: <strong>SPIKY BALL</strong></td>
+            <td>1:Blk/Bub, 2:Red/Felt, 3:Grn/Sand, 4:Blue/Coin, 5:Yel/Card</td>
+            <td><strong>Slot 3 (Grn)</strong><br>(Cond 6 Default)</td>
+            <td>▲:<strong>U</strong> ■:<strong>R</strong> ●:<strong>U</strong><br>SW: <strong>D, D, U, D</strong></td>
+          </tr>
+          <tr>
+            <td><strong>#11<br>KILO</strong></td>
+            <td>SN: <code>O48-P7</code> | 1 Batt<br><code>UNLIT:CAR</code> | Box: <strong>KEY</strong></td>
+            <td>1:Wht/Sand, 2:Blue/Card, 3:Yel/Felt, 4:Red/Coin, 5:Grn/Bub</td>
+            <td><strong>Sandpaper</strong><br>(Slot 1 - Cond 2)</td>
+            <td>▲:<strong>L</strong> ■:<strong>U</strong> ●:<strong>L</strong><br>SW: <strong>U, U, U, U</strong></td>
+          </tr>
+          <tr>
+            <td><strong>#12<br>LIMA</strong></td>
+            <td>SN: <code>N66-Q0</code> | 2 Batt<br><code>LIT:FRK</code> | Box: <strong>BATTERY</strong></td>
+            <td>1:Yel/Coin, 2:Grn/Felt, 3:Wht/Sand, 4:Blk/Bub, 5:Blue/Card</td>
+            <td><strong>Soft Felt</strong><br>(Slot 2 - Cond 3)</td>
+            <td>▲:<strong>R</strong> ■:<strong>U</strong> ●:<strong>L</strong><br>SW: <strong>D, U, D, D</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <div class="doc-footer">
+      <span>OPERATION: THREE WISE MONKEYS</span>
+      <span>CONFIDENTIAL GM ANSWER SHEET (KEEP SEPARATE)</span>
+      <span>GM EYES ONLY</span>
+    </div>
+  </div>
+
+</body>
+</html>

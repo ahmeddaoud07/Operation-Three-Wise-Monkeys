@@ -1,0 +1,20 @@
+{
+  "name": "operation-three-wise-monkeys",
+  "version": "1.0.0",
+  "description": "Operation: Three Wise Monkeys — 3-Player Cooperative Physical Bomb Defusal Game & 3D Hardware CAD Console",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "deploy": "vercel --prod"
+  },
+  "keywords": [
+    "ktane",
+    "bomb-defusal",
+    "cooperative-game",
+    "threejs",
+    "webgl",
+    "hardware-schematic"
+  ],
+  "author": "Ahmed Daoud",
+  "license": "MIT"
+}

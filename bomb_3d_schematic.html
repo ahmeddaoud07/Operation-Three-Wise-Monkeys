@@ -1,0 +1,1959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0d13">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Bomb 3D CAD">
+  <meta name="format-detection" content="telephone=no">
+  <title>Operation: Three Wise Monkeys — 3D Bomb Hardware Schematic & CAD Guide</title>
+  <script src="./lib/three.min.js"></script>
+  <script src="./lib/OrbitControls.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0a0d13;
+      --bg-panel: rgba(14, 20, 30, 0.94);
+      --bg-card: rgba(20, 29, 43, 0.96);
+      --border-panel: #202d40;
+      --border-glow: #00d2ff;
+      --cyan-bright: #00e5ff;
+      --amber-bright: #ffaa00;
+      --green-bright: #00e676;
+      --red-bright: #ff3344;
+      --text-main: #e2e8f0;
+      --text-muted: #8ca0ba;
+      --font-mono: 'Consolas', 'Courier New', monospace;
+      --font-display: 'Impact', 'Segoe UI', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-mono);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    #webgl-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      display: block;
+    }
+
+    /* TOP HUD BAR */
+    .top-bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 58px;
+      background: linear-gradient(180deg, rgba(8, 11, 17, 0.96) 0%, rgba(8, 11, 17, 0.8) 100%);
+      border-bottom: 1px solid var(--border-panel);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      z-index: 10;
+      backdrop-filter: blur(8px);
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .brand-badge {
+      background: var(--red-bright);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: bold;
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+      letter-spacing: 1px;
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 1.25rem;
+      letter-spacing: 1.5px;
+      color: #fff;
+    }
+
+    .brand-sub {
+      font-size: 0.72rem;
+      color: var(--cyan-bright);
+      letter-spacing: 1px;
+    }
+
+    .seed-selector-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .hud-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 1px;
+    }
+
+    select.seed-select {
+      background: #141c27;
+      border: 1px solid #2d3e56;
+      color: var(--amber-bright);
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+      outline: none;
+      transition: all 0.15s ease;
+    }
+
+    select.seed-select:hover {
+      border-color: var(--amber-bright);
+    }
+
+    .nav-btn {
+      background: #151e2b;
+      border: 1px solid #28374c;
+      color: var(--text-main);
+      padding: 0.4rem 0.8rem;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.15s ease;
+    }
+
+    .nav-btn:hover {
+      background: #1f2c3f;
+      border-color: var(--cyan-bright);
+      color: #fff;
+    }
+
+    /* LEFT TOOLBAR */
+    .left-toolbar {
+      position: absolute;
+      top: 72px;
+      left: 1.25rem;
+      width: 250px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-panel);
+      border-radius: 8px;
+      padding: 1rem;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
+
+    .tool-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .section-title {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding-bottom: 0.25rem;
+      margin-bottom: 0.2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .btn-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.4rem;
+    }
+
+    .tool-btn {
+      background: #141b26;
+      border: 1px solid #233144;
+      color: var(--text-main);
+      padding: 0.5rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.12s;
+    }
+
+    .tool-btn:hover {
+      background: #1d2838;
+      border-color: var(--cyan-bright);
+      color: #fff;
+    }
+
+    .tool-btn.active {
+      background: rgba(0, 229, 255, 0.15);
+      border-color: var(--cyan-bright);
+      color: var(--cyan-bright);
+      font-weight: bold;
+    }
+
+    .slider-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+    }
+
+    .slider-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.72rem;
+    }
+
+    .slider-val {
+      color: var(--cyan-bright);
+      font-weight: bold;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #1b2636;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--cyan-bright);
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(0, 229, 255, 0.8);
+    }
+
+    /* RIGHT INSPECTION DRAWER */
+    .right-drawer {
+      position: absolute;
+      top: 72px;
+      right: 1.25rem;
+      width: 330px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-panel);
+      border-radius: 8px;
+      padding: 1.2rem;
+      z-index: 10;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 12px 36px rgba(0,0,0,0.6);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      max-height: calc(100vh - 120px);
+      overflow-y: auto;
+    }
+
+    .drawer-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding-bottom: 0.6rem;
+    }
+
+    .comp-tag {
+      font-size: 0.65rem;
+      background: rgba(0, 229, 255, 0.15);
+      color: var(--cyan-bright);
+      padding: 0.15rem 0.45rem;
+      border-radius: 3px;
+      letter-spacing: 1px;
+      display: inline-block;
+      margin-bottom: 0.25rem;
+    }
+
+    .comp-title {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+
+    .info-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 6px;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      font-size: 0.76rem;
+      line-height: 1.45;
+    }
+
+    .info-card strong {
+      color: #fff;
+    }
+
+    .role-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 0.45rem;
+    }
+
+    .role-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #121822;
+      padding: 0.4rem 0.6rem;
+      border-radius: 4px;
+      font-size: 0.73rem;
+      border-left: 3px solid #4a5d78;
+    }
+
+    .role-row.blind { border-left-color: var(--green-bright); }
+    .role-row.deaf { border-left-color: var(--cyan-bright); }
+    .role-row.mute { border-left-color: var(--amber-bright); }
+
+    .interactive-subpanel {
+      background: #111722;
+      border: 1px dashed #2b3b52;
+      border-radius: 6px;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .subpanel-title {
+      font-size: 0.7rem;
+      color: var(--amber-bright);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: bold;
+    }
+
+    .object-btn-group {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.4rem;
+    }
+
+    .obj-btn {
+      background: #17212f;
+      border: 1px solid #2d3f57;
+      color: var(--text-main);
+      padding: 0.45rem;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .obj-btn:hover {
+      border-color: var(--amber-bright);
+      color: #fff;
+    }
+
+    .obj-btn.active {
+      background: rgba(255, 170, 0, 0.18);
+      border-color: var(--amber-bright);
+      color: var(--amber-bright);
+      font-weight: bold;
+    }
+
+    /* BOTTOM CONTROLS STRIP */
+    .bottom-bar {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 44px;
+      background: rgba(8, 11, 17, 0.95);
+      border-top: 1px solid var(--border-panel);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      z-index: 10;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .bottom-tips {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .tip-item span {
+      color: var(--cyan-bright);
+      font-weight: bold;
+    }
+
+    /* Mobile Drawer & Modal Backdrop */
+    .drawer-backdrop {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(5px);
+      z-index: 40;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      touch-action: none;
+    }
+    .drawer-backdrop.active {
+      display: block;
+      opacity: 1;
+    }
+
+    .drawer-close-btn {
+      display: none;
+      background: #1c2637;
+      border: 1px solid #33445e;
+      color: #cbd5e1;
+      width: 34px;
+      height: 34px;
+      border-radius: 4px;
+      font-size: 1.1rem;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .drawer-close-btn:active {
+      background: #2a3b54;
+      color: #fff;
+    }
+
+    /* Mobile HUD Bar */
+    .mobile-hud-bar {
+      display: none;
+      position: fixed;
+      bottom: max(0.6rem, env(safe-area-inset-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(12, 17, 26, 0.94);
+      border: 1px solid #233144;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.8), 0 0 15px rgba(0, 210, 255, 0.15);
+      border-radius: 30px;
+      padding: 0.35rem 0.55rem;
+      z-index: 30;
+      backdrop-filter: blur(12px);
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .mobile-hud-btn {
+      background: #151d29;
+      border: 1px solid #28374c;
+      color: var(--text-main);
+      padding: 0.45rem 0.8rem;
+      border-radius: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      cursor: pointer;
+      touch-action: manipulation;
+      min-height: 42px;
+      transition: all 0.12s;
+    }
+    .mobile-hud-btn:active {
+      transform: scale(0.96);
+      border-color: var(--cyan-bright);
+      color: #fff;
+    }
+    .mobile-hud-btn.active {
+      background: rgba(0, 229, 255, 0.2);
+      border-color: var(--cyan-bright);
+      color: var(--cyan-bright);
+    }
+
+    /* Selection Toast */
+    .selection-toast {
+      position: fixed;
+      bottom: 74px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(10, 16, 25, 0.96);
+      border: 1px solid var(--border-glow);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.8), 0 0 20px rgba(0, 229, 255, 0.25);
+      border-radius: 6px;
+      padding: 0.55rem 1rem;
+      z-index: 35;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      font-size: 0.76rem;
+      color: #fff;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      max-width: 90vw;
+    }
+    .selection-toast.show {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
+    }
+    .selection-toast .toast-action {
+      background: rgba(0, 229, 255, 0.2);
+      border: 1px solid var(--cyan-bright);
+      color: var(--cyan-bright);
+      padding: 0.2rem 0.5rem;
+      border-radius: 3px;
+      font-weight: bold;
+      font-size: 0.7rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 860px) {
+      .top-bar {
+        height: auto;
+        padding: max(0.5rem, env(safe-area-inset-top)) 0.75rem 0.5rem 0.75rem;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.45rem;
+      }
+      .brand-group {
+        justify-content: space-between;
+      }
+      .brand-title {
+        font-size: clamp(0.9rem, 3.8vw, 1.15rem);
+      }
+      .brand-sub {
+        display: none;
+      }
+      .seed-selector-group {
+        justify-content: space-between;
+        width: 100%;
+        gap: 0.4rem;
+      }
+      .hud-label {
+        display: none;
+      }
+      select.seed-select {
+        flex: 1 1 auto;
+        font-size: 0.74rem;
+        padding: 0.45rem 0.5rem;
+        min-height: 42px;
+      }
+      .nav-btn {
+        padding: 0.45rem 0.6rem;
+        font-size: 0.72rem;
+        min-height: 42px;
+      }
+      .left-toolbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 86%;
+        max-width: 320px;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0 12px 12px 0;
+        transform: translateX(-110%);
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 50;
+        box-shadow: 10px 0 40px rgba(0,0,0,0.85);
+        padding: max(1.2rem, env(safe-area-inset-top)) 1.2rem max(1.2rem, env(safe-area-inset-bottom)) 1.2rem;
+      }
+      .left-toolbar.open {
+        transform: translateX(0);
+      }
+      .right-drawer {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 88%;
+        max-width: 360px;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 12px 0 0 12px;
+        transform: translateX(110%);
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+        z-index: 50;
+        box-shadow: -10px 0 40px rgba(0,0,0,0.85);
+        padding: max(1.2rem, env(safe-area-inset-top)) 1.2rem max(1.2rem, env(safe-area-inset-bottom)) 1.2rem;
+      }
+      .right-drawer.open {
+        transform: translateX(0);
+      }
+      .drawer-close-btn {
+        display: flex;
+      }
+      .tool-btn, .obj-btn {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.74rem;
+        touch-action: manipulation;
+      }
+      .bottom-bar {
+        display: none;
+      }
+      .mobile-hud-bar {
+        display: flex;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="drawerBackdrop" class="drawer-backdrop" onclick="closeAllDrawers()"></div>
+  <canvas id="webgl-canvas"></canvas>
+
+  <!-- TOP BAR -->
+  <header class="top-bar">
+    <div class="brand-group">
+      <span class="brand-badge">HARDWARE CAD</span>
+      <div>
+        <div class="brand-title">OPERATION: THREE WISE MONKEYS</div>
+        <div class="brand-sub">3D INTERACTIVE DISPOSAL SCHEMATIC & DIY BLUEPRINT</div>
+      </div>
+    </div>
+
+    <div class="seed-selector-group">
+      <span class="hud-label">SEED CONFIG:</span>
+      <select id="seedSelect" class="seed-select" onchange="loadSeed(this.value)">
+        <option value="0">#01 // ALPHA (Key, Lit FRK, 2B)</option>
+        <option value="1">#02 // BRAVO (Battery, Unlit CAR, 1B)</option>
+        <option value="2">#03 // CHARLIE (Padlock, Lit FRK, 0B)</option>
+        <option value="3">#04 // DELTA (Wood Block, Unlit CAR, 2B)</option>
+        <option value="4">#05 // ECHO (Spiky Ball, Lit FRK, 1B)</option>
+        <option value="5">#06 // FOXTROT (Key, Unlit CAR, 2B)</option>
+        <option value="6">#07 // GOLF (Battery, Unlit CAR, 0B)</option>
+        <option value="7">#08 // HOTEL (Padlock, Lit FRK, 1B)</option>
+        <option value="8">#09 // INDIA (Wood Block, Lit FRK, 2B)</option>
+        <option value="9">#10 // JULIET (Spiky Ball, Unlit CAR, 0B)</option>
+        <option value="10">#11 // KILO (Key, Unlit CAR, 1B)</option>
+        <option value="11">#12 // LIMA (Battery, Lit FRK, 2B)</option>
+      </select>
+
+      <a href="index.html" class="nav-btn" target="_blank">
+        <span>⏱️ TIMER CONSOLE</span>
+      </a>
+      <a href="BOMB_DEFUSAL_MANUAL_PRINTABLE.html" class="nav-btn" target="_blank">
+        <span>📖 MANUAL</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- LEFT TOOLBAR -->
+  <aside class="left-toolbar" id="leftToolbar">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:0.5rem;">
+      <span style="font-weight:bold; font-size:0.85rem; color:#fff; letter-spacing:1px;">🛠️ CONTROLS & MODES</span>
+      <button class="drawer-close-btn" onclick="toggleDrawer('left')" aria-label="Close tools">✕</button>
+    </div>
+
+    <div class="tool-section">
+      <div class="section-title">
+        <span>VIEWING MODE</span>
+      </div>
+      <div class="btn-grid">
+        <button class="tool-btn active" id="btnModeShaded" onclick="setRenderMode('shaded')">TACTICAL</button>
+        <button class="tool-btn" id="btnModeBlueprint" onclick="setRenderMode('blueprint')">BLUEPRINT</button>
+        <button class="tool-btn" id="btnModeXray" onclick="setRenderMode('xray')">X-RAY</button>
+        <button class="tool-btn" id="btnModeWireframe" onclick="setRenderMode('wireframe')">WIREFRAME</button>
+      </div>
+    </div>
+
+    <div class="tool-section">
+      <div class="section-title">
+        <span>EXPLODED ASSEMBLY</span>
+      </div>
+      <div class="slider-wrap">
+        <div class="slider-header">
+          <span>Explosion Distance</span>
+          <span class="slider-val" id="explodeVal">0%</span>
+        </div>
+        <input type="range" id="explodeSlider" min="0" max="100" value="0" oninput="setExplodedFactor(this.value)">
+      </div>
+    </div>
+
+    <div class="tool-section">
+      <div class="section-title">
+        <span>CAMERA PERSPECTIVE</span>
+      </div>
+      <div class="btn-grid">
+        <button class="tool-btn" onclick="snapCamera('iso')">ISOMETRIC</button>
+        <button class="tool-btn" onclick="snapCamera('front')">FRONT (DEAF)</button>
+        <button class="tool-btn" onclick="snapCamera('side')">HOLE (BLIND)</button>
+        <button class="tool-btn" onclick="snapCamera('top')">TOP CLUES</button>
+      </div>
+    </div>
+
+    <div class="tool-section">
+      <div class="section-title">
+        <span>SCHEMATIC OVERLAYS</span>
+      </div>
+      <button class="tool-btn active" id="btnDimensions" onclick="toggleDimensions()">DIMENSION LINES [ON]</button>
+      <button class="tool-btn" id="btnAutoRotate" onclick="toggleAutoRotate()">AUTO-ROTATE [OFF]</button>
+      <button class="tool-btn" onclick="resetAllInteractives()">RESET WIRES & DIALS</button>
+    </div>
+  </aside>
+
+  <!-- RIGHT INSPECTION DRAWER -->
+  <aside class="right-drawer" id="rightDrawer">
+    <div class="drawer-header">
+      <div>
+        <span class="comp-tag" id="drawerTag">OVERVIEW</span>
+        <h2 class="comp-title" id="drawerTitle">DISPOSAL UNIT #01</h2>
+      </div>
+      <button class="drawer-close-btn" onclick="toggleDrawer('right')" aria-label="Close inspection">✕</button>
+    </div>
+
+    <div class="info-card" id="drawerDesc">
+      Click on any component (wires, dials, switches, mystery hole, clues) in the 3D model to inspect its DIY building specs, dimensions, and player handicap rules.
+    </div>
+
+    <div class="role-grid" id="drawerRoles">
+      <div class="role-row blind">
+        <span>🖐️ <strong>BLIND:</strong> Reaches into right-side hole; feels textures, dials & switches.</span>
+      </div>
+      <div class="role-row deaf">
+        <span>👁️ <strong>DEAF:</strong> Reads serial & indicators; shouts spoken orders to Blind.</span>
+      </div>
+      <div class="role-row mute">
+        <span>🤫 <strong>MUTE:</strong> Reads manual rules 3m away; mimes solutions via pure charades.</span>
+      </div>
+    </div>
+
+    <div class="interactive-subpanel" id="drawerInteractive">
+      <span class="subpanel-title">SWAP CHAMBER OBJECT</span>
+      <div class="object-btn-group">
+        <button class="obj-btn active" onclick="setMysteryObject('KEY')">1. METAL KEY</button>
+        <button class="obj-btn" onclick="setMysteryObject('BATTERY')">2. AA BATTERY</button>
+        <button class="obj-btn" onclick="setMysteryObject('SPIKY')">3. SPIKY BALL</button>
+        <button class="obj-btn" onclick="setMysteryObject('WOOD')">4. WOOD BLOCK</button>
+        <button class="obj-btn" onclick="setMysteryObject('PADLOCK')" style="grid-column: span 2;">5. HEAVY PADLOCK</button>
+      </div>
+    </div>
+
+    <div class="info-card" id="drawerSpecs">
+      <strong>DIY BUILD SPECIFICATIONS:</strong><br>
+      • Box size: 30cm W × 25cm H × 15cm D<br>
+      • Mystery Chamber hole: 10cm × 10cm on right face<br>
+      • Budget: Under $15 from household items
+    </div>
+  </aside>
+
+  <!-- SELECTION TOAST -->
+  <div id="selectionToast" class="selection-toast" onclick="openDrawer('right')">
+    <span id="toastText">Component Selected</span>
+    <span class="toast-action">INSPECT ➔</span>
+  </div>
+
+  <!-- MOBILE FLOATING HUD BAR -->
+  <div class="mobile-hud-bar">
+    <button class="mobile-hud-btn" id="btnMobileTools" onclick="toggleDrawer('left')">
+      <span>🛠️</span><span>TOOLS</span>
+    </button>
+    <button class="mobile-hud-btn" id="btnMobileInspect" onclick="toggleDrawer('right')">
+      <span>ℹ️</span><span>INSPECT</span>
+    </button>
+    <button class="mobile-hud-btn" onclick="snapCamera('iso')">
+      <span>🔄</span><span>RESET</span>
+    </button>
+    <button class="mobile-hud-btn" id="btnMobileSound" onclick="toggleSound()">
+      <span>🔊</span><span>SFX</span>
+    </button>
+  </div>
+
+  <!-- BOTTOM BAR (DESKTOP) -->
+  <footer class="bottom-bar">
+    <div class="bottom-tips">
+      <div class="tip-item"><span>Left Click + Drag:</span> Orbit 360°</div>
+      <div class="tip-item"><span>Right Click + Drag:</span> Pan Camera</div>
+      <div class="tip-item"><span>Scroll:</span> Zoom In/Out</div>
+      <div class="tip-item"><span>Click Parts:</span> Cut Wires, Flip Switches, Rotate Dials</div>
+    </div>
+    <div id="soundIndicator" style="cursor: pointer;" onclick="toggleSound()">
+      🔊 SFX: <span style="color:var(--green-bright); font-weight:bold;">ENABLED</span>
+    </div>
+  </footer>
+
+  <script>
+    /* =========================================================================
+       AUDIO SOUND EFFECTS
+       ========================================================================= */
+    const SFX = {
+      snip: new Audio('audio/WireSnip.wav'),
+      switch: new Audio('audio/LightSwitch.wav'),
+      button: new Audio('audio/ButtonPress.wav'),
+      chime: new Audio('audio/CorrectChime.wav')
+    };
+
+    let soundEnabled = true;
+    let audioUnlocked = false;
+
+    function unlockAudio() {
+      if (audioUnlocked) return;
+      audioUnlocked = true;
+      Object.values(SFX).forEach(audio => {
+        try {
+          audio.muted = true;
+          const p = audio.play();
+          if (p !== undefined) {
+            p.then(() => {
+              audio.pause();
+              audio.currentTime = 0;
+              audio.muted = false;
+            }).catch(() => {
+              audio.muted = false;
+            });
+          } else {
+            audio.muted = false;
+          }
+        } catch (e) {
+          audio.muted = false;
+        }
+      });
+    }
+
+    ['touchstart', 'touchend', 'pointerdown', 'click'].forEach(evt => {
+      window.addEventListener(evt, unlockAudio, { once: true, passive: true });
+    });
+
+    function playSfx(name) {
+      if (!soundEnabled || !SFX[name]) return;
+      unlockAudio();
+      try {
+        const a = SFX[name].cloneNode();
+        a.volume = 0.8;
+        const p = a.play();
+        if (p !== undefined) {
+          p.catch(() => {
+            SFX[name].currentTime = 0;
+            SFX[name].volume = 0.8;
+            SFX[name].play().catch(() => {});
+          });
+        }
+      } catch (e) {
+        try {
+          SFX[name].currentTime = 0;
+          SFX[name].volume = 0.8;
+          SFX[name].play().catch(() => {});
+        } catch (err) {}
+      }
+      if (navigator.vibrate) {
+        try { navigator.vibrate(25); } catch (e) {}
+      }
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      const el = document.getElementById('soundIndicator');
+      if (el) {
+        el.innerHTML = soundEnabled ?
+          '🔊 SFX: <span style="color:var(--green-bright); font-weight:bold;">ENABLED</span>' :
+          '🔇 SFX: <span style="color:var(--red-bright); font-weight:bold;">MUTED</span>';
+      }
+      const mobileBtn = document.getElementById('btnMobileSound');
+      if (mobileBtn) {
+        mobileBtn.innerHTML = soundEnabled ? '<span>🔊</span><span>SFX</span>' : '<span>🔇</span><span>MUTED</span>';
+        mobileBtn.classList.toggle('active', soundEnabled);
+      }
+      if (soundEnabled) unlockAudio();
+    }
+
+    /* =========================================================================
+       THREE.JS SETUP
+       ========================================================================= */
+    const canvas = document.getElementById('webgl-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0a0e16);
+    scene.fog = new THREE.FogExp2(0x0a0e16, 0.008);
+
+    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(28, 22, 42);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.maxPolarAngle = Math.PI / 2 + 0.1;
+    controls.minDistance = 10;
+    controls.maxDistance = 120;
+    controls.target.set(0, 0, 0);
+    if (THREE.TOUCH) {
+      controls.touches = {
+        ONE: THREE.TOUCH.ROTATE,
+        TWO: THREE.TOUCH.DOLLY_PAN
+      };
+    }
+
+    /* =========================================================================
+       LIGHTING
+       ========================================================================= */
+    const ambientLight = new THREE.AmbientLight(0xdde8ff, 0.7);
+    scene.add(ambientLight);
+
+    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.2);
+    dirLight1.position.set(30, 45, 35);
+    dirLight1.castShadow = true;
+    dirLight1.shadow.mapSize.width = 2048;
+    dirLight1.shadow.mapSize.height = 2048;
+    dirLight1.shadow.camera.near = 10;
+    dirLight1.shadow.camera.far = 120;
+    dirLight1.shadow.camera.left = -25;
+    dirLight1.shadow.camera.right = 25;
+    dirLight1.shadow.camera.top = 25;
+    dirLight1.shadow.camera.bottom = -25;
+    scene.add(dirLight1);
+
+    const dirLight2 = new THREE.DirectionalLight(0x00d2ff, 0.4);
+    dirLight2.position.set(-30, 15, -20);
+    scene.add(dirLight2);
+
+    const rimLight = new THREE.DirectionalLight(0xffaa00, 0.35);
+    rimLight.position.set(0, -20, -30);
+    scene.add(rimLight);
+
+    // Floor grid
+    const grid = new THREE.GridHelper(90, 45, 0x00e5ff, 0x1c2b3f);
+    grid.position.y = -14;
+    scene.add(grid);
+
+    /* =========================================================================
+       PROCEDURAL CANVAS TEXTURES
+       ========================================================================= */
+    function makeCardboardTexture() {
+      const c = document.createElement('canvas');
+      c.width = 1024; c.height = 1024;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#b68854';
+      ctx.fillRect(0, 0, 1024, 1024);
+
+      // Noise
+      for (let i = 0; i < 60000; i++) {
+        const x = Math.random() * 1024;
+        const y = Math.random() * 1024;
+        const v = Math.random() * 20 - 10;
+        ctx.fillStyle = `rgba(${160 + v}, ${115 + v}, ${70 + v}, 0.25)`;
+        ctx.fillRect(x, y, 2, 2);
+      }
+      // Corrugation streaks
+      ctx.strokeStyle = 'rgba(80, 50, 20, 0.08)';
+      ctx.lineWidth = 4;
+      for (let x = 0; x < 1024; x += 16) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, 1024);
+        ctx.stroke();
+      }
+      return new THREE.CanvasTexture(c);
+    }
+
+    function makeHazardTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 128;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#f5b000';
+      ctx.fillRect(0, 0, 512, 128);
+      ctx.fillStyle = '#111';
+      for (let x = -128; x < 640; x += 64) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x + 32, 0);
+        ctx.lineTo(x - 32, 128);
+        ctx.lineTo(x - 64, 128);
+        ctx.closePath();
+        ctx.fill();
+      }
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.repeat.set(3, 1);
+      return tex;
+    }
+
+    function makeTextBadgeTexture(text, sub, isLit = false) {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#151b22';
+      ctx.fillRect(0, 0, 512, 256);
+      ctx.strokeStyle = '#38495f';
+      ctx.lineWidth = 8;
+      ctx.strokeRect(8, 8, 496, 240);
+
+      ctx.fillStyle = '#8ca0ba';
+      ctx.font = 'bold 36px Consolas, monospace';
+      ctx.fillText(sub, 28, 64);
+
+      ctx.fillStyle = isLit ? '#00e676' : '#fff';
+      ctx.font = 'bold 72px Consolas, monospace';
+      ctx.fillText(text, 28, 150);
+
+      if (isLit) {
+        ctx.beginPath();
+        ctx.arc(430, 128, 28, 0, Math.PI * 2);
+        ctx.fillStyle = '#00e676';
+        ctx.shadowColor = '#00e676';
+        ctx.shadowBlur = 30;
+        ctx.fill();
+      }
+      return new THREE.CanvasTexture(c);
+    }
+
+    function makeSandpaperTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#875d36';
+      ctx.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 20000; i++) {
+        const x = Math.random() * 256, y = Math.random() * 256;
+        ctx.fillStyle = Math.random() > 0.5 ? '#4a301a' : '#d2a679';
+        ctx.fillRect(x, y, 1, 1);
+      }
+      return new THREE.CanvasTexture(c);
+    }
+
+    function makeFeltTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 256;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#2d3748';
+      ctx.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 15000; i++) {
+        const x = Math.random() * 256, y = Math.random() * 256;
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.fillRect(x, y, 2, 1);
+      }
+      return new THREE.CanvasTexture(c);
+    }
+
+    function makeWoodTexture() {
+      const c = document.createElement('canvas');
+      c.width = 512; c.height = 512;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#d2a679';
+      ctx.fillRect(0, 0, 512, 512);
+      ctx.strokeStyle = '#a67244';
+      ctx.lineWidth = 3;
+      for (let y = 10; y < 512; y += 18) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.bezierCurveTo(150, y + Math.sin(y)*15, 350, y - Math.sin(y)*15, 512, y);
+        ctx.stroke();
+      }
+      return new THREE.CanvasTexture(c);
+    }
+
+    const matCardboard = new THREE.MeshStandardMaterial({
+      map: makeCardboardTexture(),
+      roughness: 0.85,
+      metalness: 0.05
+    });
+
+    const matHazard = new THREE.MeshStandardMaterial({
+      map: makeHazardTexture(),
+      roughness: 0.5
+    });
+
+    const matMetal = new THREE.MeshStandardMaterial({
+      color: 0xcccccc,
+      metalness: 0.85,
+      roughness: 0.25
+    });
+
+    const matBrass = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
+      metalness: 0.75,
+      roughness: 0.35
+    });
+
+    const matDarkPlate = new THREE.MeshStandardMaterial({
+      color: 0x181e29,
+      roughness: 0.6,
+      metalness: 0.2
+    });
+
+    const matWoodPin = new THREE.MeshStandardMaterial({
+      color: 0xdeb887,
+      roughness: 0.7
+    });
+
+    /* =========================================================================
+       BOMB MODEL HIERARCHY & EXPLODED GROUPS
+       ========================================================================= */
+    const rootBomb = new THREE.Group();
+    scene.add(rootBomb);
+
+    const explodedParts = [];
+    function registerExploded(obj, offsetVec) {
+      explodedParts.push({ obj, basePos: obj.position.clone(), offset: offsetVec });
+    }
+
+    // 1. BOX CHASSIS (30W x 25H x 15D)
+    const boxGroup = new THREE.Group();
+    rootBomb.add(boxGroup);
+
+    // Box Shell (open front face for faceplate)
+    const boxGeo = new THREE.BoxGeometry(30, 25, 15);
+    const boxMesh = new THREE.Mesh(boxGeo, matCardboard);
+    boxMesh.castShadow = true;
+    boxMesh.receiveShadow = true;
+    boxGroup.add(boxMesh);
+
+    // Hazard stripe on bottom
+    const hazardGeo = new THREE.PlaneGeometry(30, 2.5);
+    const hazardMesh = new THREE.Mesh(hazardGeo, matHazard);
+    hazardMesh.position.set(0, -11.25, 7.51);
+    boxGroup.add(hazardMesh);
+
+    // Metal corner protectors
+    const cornerGeo = new THREE.BoxGeometry(2, 2, 2);
+    [[-14.5, 12, 7], [14.5, 12, 7], [-14.5, -12, 7], [14.5, -12, 7],
+     [-14.5, 12, -7], [14.5, 12, -7], [-14.5, -12, -7], [14.5, -12, -7]].forEach(p => {
+      const c = new THREE.Mesh(cornerGeo, matMetal);
+      c.position.set(...p);
+      boxGroup.add(c);
+    });
+
+    // 2. MYSTERY CHAMBER HOLE (Right Side, 10x10)
+    const holeGroup = new THREE.Group();
+    holeGroup.position.set(15.01, -2, 0);
+    boxGroup.add(holeGroup);
+
+    // Dark sock/sleeve interior
+    const sleeveGeo = new THREE.CylinderGeometry(5.2, 5.2, 11, 24, 1, true);
+    const sleeveMat = new THREE.MeshBasicMaterial({ color: 0x05070a, side: THREE.BackSide });
+    const sleeve = new THREE.Mesh(sleeveGeo, sleeveMat);
+    sleeve.rotation.z = Math.PI / 2;
+    sleeve.position.set(-5.5, 0, 0);
+    holeGroup.add(sleeve);
+
+    // Outer hole frame trim
+    const trimGeo = new THREE.RingGeometry(4.8, 5.6, 24);
+    const trimMat = new THREE.MeshStandardMaterial({ color: 0x111620, roughness: 0.8 });
+    const trim = new THREE.Mesh(trimGeo, trimMat);
+    trim.rotation.y = Math.PI / 2;
+    holeGroup.add(trim);
+
+    // Interior Chamber Shelf & Mystery Objects Container
+    const chamberObjectContainer = new THREE.Group();
+    chamberObjectContainer.position.set(7.5, -3, 0);
+    rootBomb.add(chamberObjectContainer);
+    registerExploded(chamberObjectContainer, new THREE.Vector3(14, 0, 0));
+
+    // 3. FRONT FACEPLATE & CONTROLS
+    const faceplateGroup = new THREE.Group();
+    faceplateGroup.position.set(0, 0, 7.6);
+    rootBomb.add(faceplateGroup);
+    registerExploded(faceplateGroup, new THREE.Vector3(0, 0, 10));
+
+    const faceGeo = new THREE.PlaneGeometry(28.5, 23.5);
+    const faceMesh = new THREE.Mesh(faceGeo, matDarkPlate);
+    faceMesh.receiveShadow = true;
+    faceplateGroup.add(faceMesh);
+
+    // 4. TOP CLUE STRIP
+    const cluesGroup = new THREE.Group();
+    cluesGroup.position.set(0, 9.2, 0.1);
+    faceplateGroup.add(cluesGroup);
+
+    // Serial badge
+    const snGeo = new THREE.PlaneGeometry(8.5, 3.2);
+    let snTex = makeTextBadgeTexture('A34-E9', 'SN / SERIAL', false);
+    const snMat = new THREE.MeshBasicMaterial({ map: snTex });
+    const snMesh = new THREE.Mesh(snGeo, snMat);
+    snMesh.position.set(-8.5, 0, 0.05);
+    cluesGroup.add(snMesh);
+
+    // Indicator badge
+    const indGeo = new THREE.PlaneGeometry(8.5, 3.2);
+    let indTex = makeTextBadgeTexture('LIT: FRK', 'INDICATOR', true);
+    const indMat = new THREE.MeshBasicMaterial({ map: indTex });
+    const indMesh = new THREE.Mesh(indGeo, indMat);
+    indMesh.position.set(1.5, 0, 0.05);
+    cluesGroup.add(indMesh);
+
+    // Dual AA Battery Clips & Batteries
+    const battGroup = new THREE.Group();
+    battGroup.position.set(10.5, 0, 0.2);
+    cluesGroup.add(battGroup);
+
+    const battClipGeo = new THREE.BoxGeometry(4.5, 2.8, 0.6);
+    const battClip = new THREE.Mesh(battClipGeo, matDarkPlate);
+    battGroup.add(battClip);
+
+    const battMeshes = [];
+    for (let b = 0; b < 2; b++) {
+      const battBodyGeo = new THREE.CylinderGeometry(0.55, 0.55, 2.2, 16);
+      const battBodyMat = new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 0.6, roughness: 0.3 });
+      const battBody = new THREE.Mesh(battBodyGeo, battBodyMat);
+      battBody.rotation.z = Math.PI / 2;
+      battBody.position.set(0, b === 0 ? 0.7 : -0.7, 0.45);
+
+      // Gold terminal ring
+      const ringGeo = new THREE.CylinderGeometry(0.56, 0.56, 0.6, 16);
+      const ringMat = new THREE.MeshStandardMaterial({ color: 0xd4af37, metalness: 0.8, roughness: 0.2 });
+      const ring = new THREE.Mesh(ringGeo, ringMat);
+      ring.position.y = 0.8;
+      battBody.add(ring);
+
+      battGroup.add(battBody);
+      battMeshes.push(battBody);
+    }
+
+    // 5. MODULE 2: THREE 3D SHAPE DIALS (Upper Left)
+    const dialsGroup = new THREE.Group();
+    dialsGroup.position.set(-6.8, 4.2, 0.2);
+    faceplateGroup.add(dialsGroup);
+
+    const dialObjects = [];
+    const dialShapes = ['TRIANGLE', 'SQUARE', 'CIRCLE'];
+    const dialAngles = [0, 0, 0]; // 0=UP, 1=RIGHT, 2=DOWN, 3=LEFT
+
+    for (let d = 0; d < 3; d++) {
+      const dGroup = new THREE.Group();
+      dGroup.position.set(-4.5 + d * 4.5, 0, 0);
+      dialsGroup.add(dGroup);
+
+      // Base cap
+      const capGeo = new THREE.CylinderGeometry(1.6, 1.7, 0.7, 24);
+      const capMat = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.4 });
+      const cap = new THREE.Mesh(capGeo, capMat);
+      cap.rotation.x = Math.PI / 2;
+      dGroup.add(cap);
+
+      // Center brass fastener brad
+      const bradGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.8, 12);
+      const brad = new THREE.Mesh(bradGeo, matBrass);
+      brad.rotation.x = Math.PI / 2;
+      dGroup.add(brad);
+
+      // Raised 3D Shape on Top
+      let shapeMesh;
+      if (d === 0) { // Triangle
+        const shape = new THREE.Shape();
+        shape.moveTo(0, 0.8);
+        shape.lineTo(-0.7, -0.6);
+        shape.lineTo(0.7, -0.6);
+        shape.closePath();
+        const extrudeSettings = { depth: 0.35, bevelEnabled: false };
+        const geo = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+        shapeMesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x00e5ff, metalness: 0.4 }));
+        shapeMesh.position.set(0, 0, 0.35);
+      } else if (d === 1) { // Square
+        const geo = new THREE.BoxGeometry(1.1, 1.1, 0.35);
+        shapeMesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0xffaa00, metalness: 0.4 }));
+        shapeMesh.position.set(0, 0, 0.52);
+      } else { // Circle
+        const geo = new THREE.CylinderGeometry(0.65, 0.65, 0.35, 20);
+        shapeMesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ color: 0x00e676, metalness: 0.4 }));
+        shapeMesh.rotation.x = Math.PI / 2;
+        shapeMesh.position.set(0, 0, 0.52);
+      }
+      dGroup.add(shapeMesh);
+
+      // Direction Notch Arrow & Tactile Bump
+      const notchGeo = new THREE.ConeGeometry(0.2, 0.5, 8);
+      const notchMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+      const notch = new THREE.Mesh(notchGeo, notchMat);
+      notch.position.set(0, 1.35, 0.45);
+      dGroup.add(notch);
+
+      // Clickable hit area
+      const hitGeo = new THREE.CylinderGeometry(1.8, 1.8, 1.2, 16);
+      const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+      const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+      hitMesh.rotation.x = Math.PI / 2;
+      hitMesh.userData = { type: 'dial', index: d, name: dialShapes[d] + ' DIAL' };
+      dGroup.add(hitMesh);
+
+      dialObjects.push({ group: dGroup, angleIndex: 0, shape: dialShapes[d] });
+    }
+
+    // 6. MODULE 3: FOUR TOGGLE SWITCHES (Upper Right)
+    const switchesGroup = new THREE.Group();
+    switchesGroup.position.set(6.8, 4.2, 0.2);
+    faceplateGroup.add(switchesGroup);
+
+    // Switch mounting panel
+    const swPanelGeo = new THREE.BoxGeometry(10.5, 3.2, 0.3);
+    const swPanel = new THREE.Mesh(swPanelGeo, matMetal);
+    switchesGroup.add(swPanel);
+
+    const switchObjects = [];
+    for (let s = 0; s < 4; s++) {
+      const swGroup = new THREE.Group();
+      swGroup.position.set(-3.75 + s * 2.5, 0, 0.15);
+      switchesGroup.add(swGroup);
+
+      // Bushing collar
+      const bushGeo = new THREE.CylinderGeometry(0.4, 0.5, 0.4, 12);
+      const bush = new THREE.Mesh(bushGeo, matBrass);
+      bush.rotation.x = Math.PI / 2;
+      swGroup.add(bush);
+
+      // Lever arm
+      const leverArm = new THREE.Group();
+      leverArm.position.set(0, 0, 0.2);
+      swGroup.add(leverArm);
+
+      const leverGeo = new THREE.CylinderGeometry(0.18, 0.18, 1.4, 10);
+      const leverMat = new THREE.MeshStandardMaterial({ color: 0xdddddd, metalness: 0.9, roughness: 0.2 });
+      const lever = new THREE.Mesh(leverGeo, leverMat);
+      lever.position.y = 0.7;
+      leverArm.add(lever);
+
+      // Rubber ball tip
+      const tipGeo = new THREE.SphereGeometry(0.25, 10, 10);
+      const tipMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+      const tip = new THREE.Mesh(tipGeo, tipMat);
+      tip.position.y = 1.4;
+      leverArm.add(tip);
+
+      // Default lever angle: UP (+30 deg)
+      leverArm.rotation.x = -0.55;
+
+      // Hit area
+      const hitGeo = new THREE.BoxGeometry(1.6, 2.2, 1.5);
+      const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+      const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+      hitMesh.userData = { type: 'switch', index: s, name: `SWITCH #${s + 1}` };
+      swGroup.add(hitMesh);
+
+      switchObjects.push({ group: swGroup, lever: leverArm, isUp: true });
+    }
+
+    // 7. MODULE 1: 5 TACTILE WIRES & 5 TEXTURE BADGES
+    const wiresGroup = new THREE.Group();
+    wiresGroup.position.set(0, -4.5, 0.2);
+    faceplateGroup.add(wiresGroup);
+
+    const wireObjects = [];
+    const textureObjects = [];
+    const wireColorsHex = [0xff2222, 0x2266ff, 0xffbb00, 0x00cc44, 0xeeeeee, 0x111111];
+    const textureTypes = ['SANDPAPER', 'BUBBLE_WRAP', 'METAL_COIN', 'SOFT_FELT', 'RIBBED_CARD'];
+
+    for (let w = 0; w < 5; w++) {
+      const yPos = 3.6 - w * 1.8;
+      const rowGroup = new THREE.Group();
+      rowGroup.position.set(0, yPos, 0);
+      wiresGroup.add(rowGroup);
+
+      // Texture Badge on left
+      const badgeGeo = new THREE.BoxGeometry(2.4, 1.4, 0.25);
+      let badgeMat;
+      if (w === 0) badgeMat = new THREE.MeshStandardMaterial({ map: makeSandpaperTexture() });
+      else if (w === 1) { // Bubble wrap with 6 bumps
+        badgeMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, roughness: 0.1, transparent: true, opacity: 0.75 });
+      } else if (w === 2) badgeMat = matBrass;
+      else if (w === 3) badgeMat = new THREE.MeshStandardMaterial({ map: makeFeltTexture() });
+      else badgeMat = new THREE.MeshStandardMaterial({ map: makeCardboardTexture() });
+
+      const badge = new THREE.Mesh(badgeGeo, badgeMat);
+      badge.position.set(-11.5, 0, 0.12);
+      rowGroup.add(badge);
+
+      if (w === 1) { // Add 3D bubble bumps
+        for (let bx = -0.7; bx <= 0.7; bx += 0.7) {
+          const bumpGeo = new THREE.SphereGeometry(0.24, 8, 8);
+          const bump = new THREE.Mesh(bumpGeo, badgeMat);
+          bump.position.set(-11.5 + bx, 0, 0.28);
+          rowGroup.add(bump);
+        }
+      } else if (w === 2) { // Add coin relief
+        const coinGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.15, 16);
+        const coin = new THREE.Mesh(coinGeo, matMetal);
+        coin.rotation.x = Math.PI / 2;
+        coin.position.set(-11.5, 0, 0.28);
+        rowGroup.add(coin);
+      }
+
+      // Left wooden clothespin
+      const pinL = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.4, 0.8), matWoodPin);
+      pinL.position.set(-9.2, 0, 0.4);
+      rowGroup.add(pinL);
+
+      // Right wooden clothespin
+      const pinR = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.4, 0.8), matWoodPin);
+      pinR.position.set(9.2, 0, 0.4);
+      rowGroup.add(pinR);
+
+      // Flexible wire curve
+      const p1 = new THREE.Vector3(-9.0, 0, 0.5);
+      const p2 = new THREE.Vector3(0, -0.2 - Math.random() * 0.3, 0.8 + Math.random() * 0.4);
+      const p3 = new THREE.Vector3(9.0, 0, 0.5);
+      const curve = new THREE.CatmullRomCurve3([p1, p2, p3]);
+      const wireGeo = new THREE.TubeGeometry(curve, 32, 0.16, 8, false);
+      const wireMat = new THREE.MeshStandardMaterial({
+        color: wireColorsHex[w],
+        roughness: 0.4,
+        metalness: 0.1
+      });
+      const wireMesh = new THREE.Mesh(wireGeo, wireMat);
+      wireMesh.castShadow = true;
+      rowGroup.add(wireMesh);
+
+      // Hit area for wire
+      const hitGeo = new THREE.BoxGeometry(18, 1.2, 1.0);
+      const hitMat = new THREE.MeshBasicMaterial({ visible: false });
+      const hitMesh = new THREE.Mesh(hitGeo, hitMat);
+      hitMesh.position.set(0, 0, 0.6);
+      hitMesh.userData = { type: 'wire', index: w, name: `WIRE SLOT #${w + 1}` };
+      rowGroup.add(hitMesh);
+
+      wireObjects.push({ mesh: wireMesh, isCut: false, colorIndex: w });
+      textureObjects.push({ badge, type: textureTypes[w] });
+    }
+
+    // 8. 3D MYSTERY OBJECTS (Interchangeable)
+    const mysteryObjects = {};
+
+    // A. Metal Key
+    const keyGroup = new THREE.Group();
+    const keyHead = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.32, 12, 24), matBrass);
+    keyGroup.add(keyHead);
+    const keyStem = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 3.2, 12), matBrass);
+    keyStem.position.y = -2.0;
+    keyGroup.add(keyStem);
+    const keyTooth1 = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.4, 0.25), matBrass);
+    keyTooth1.position.set(0.35, -2.8, 0);
+    keyGroup.add(keyTooth1);
+    const keyTooth2 = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.4, 0.25), matBrass);
+    keyTooth2.position.set(0.45, -3.4, 0);
+    keyGroup.add(keyTooth2);
+    keyGroup.scale.set(0.85, 0.85, 0.85);
+    keyGroup.rotation.z = 0.3;
+    chamberObjectContainer.add(keyGroup);
+    mysteryObjects['KEY'] = keyGroup;
+
+    // B. AA Battery
+    const batGroup = new THREE.Group();
+    const batMesh = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 4.2, 24), new THREE.MeshStandardMaterial({ color: 0x111, metalness: 0.6 }));
+    batGroup.add(batMesh);
+    const batTip = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.5, 16), matBrass);
+    batTip.position.y = 2.3;
+    batGroup.add(batTip);
+    const batGold = new THREE.Mesh(new THREE.CylinderGeometry(1.11, 1.11, 1.2, 24), matBrass);
+    batGold.position.y = 1.4;
+    batGroup.add(batGold);
+    batGroup.visible = false;
+    chamberObjectContainer.add(batGroup);
+    mysteryObjects['BATTERY'] = batGroup;
+
+    // C. Spiky Ball
+    const spikyGroup = new THREE.Group();
+    const ballBase = new THREE.Mesh(new THREE.SphereGeometry(1.5, 20, 20), new THREE.MeshStandardMaterial({ color: 0x00d2ff, roughness: 0.3 }));
+    spikyGroup.add(ballBase);
+    for (let i = 0; i < 36; i++) {
+      const phi = Math.acos(-1 + (2 * i) / 36);
+      const theta = Math.sqrt(36 * Math.PI) * phi;
+      const spike = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.9, 8), new THREE.MeshStandardMaterial({ color: 0x0099cc, roughness: 0.4 }));
+      spike.position.setFromSphericalCoords(1.7, phi, theta);
+      spike.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), spike.position.clone().normalize());
+      spikyGroup.add(spike);
+    }
+    spikyGroup.visible = false;
+    chamberObjectContainer.add(spikyGroup);
+    mysteryObjects['SPIKY'] = spikyGroup;
+
+    // D. Wood Block
+    const woodBlock = new THREE.Mesh(new THREE.BoxGeometry(3.2, 3.2, 3.2), new THREE.MeshStandardMaterial({ map: makeWoodTexture(), roughness: 0.7 }));
+    woodBlock.visible = false;
+    chamberObjectContainer.add(woodBlock);
+    mysteryObjects['WOOD'] = woodBlock;
+
+    // E. Heavy Padlock
+    const padlockGroup = new THREE.Group();
+    const lockBody = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.6, 1.4), matBrass);
+    padlockGroup.add(lockBody);
+    const shackle = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.35, 12, 24, Math.PI), matMetal);
+    shackle.position.y = 1.3;
+    padlockGroup.add(shackle);
+    const keyhole = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.1, 12), new THREE.MeshBasicMaterial({ color: 0x050505 }));
+    keyhole.rotation.x = Math.PI / 2;
+    keyhole.position.set(0, -0.4, 0.71);
+    padlockGroup.add(keyhole);
+    padlockGroup.visible = false;
+    chamberObjectContainer.add(padlockGroup);
+    mysteryObjects['PADLOCK'] = padlockGroup;
+
+    let activeObjectKey = 'KEY';
+    function setMysteryObject(key) {
+      Object.keys(mysteryObjects).forEach(k => {
+        mysteryObjects[k].visible = (k === key);
+      });
+      activeObjectKey = key;
+      playSfx('button');
+
+      document.querySelectorAll('.obj-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.includes(key));
+      });
+
+      inspectModule('chamber');
+    }
+
+    /* =========================================================================
+       DIMENSION LINES (Procedural CAD arrows & markings)
+       ========================================================================= */
+    const dimensionsGroup = new THREE.Group();
+    rootBomb.add(dimensionsGroup);
+
+    function createDimLine(p1, p2, labelText) {
+      const g = new THREE.Group();
+      const lineGeo = new THREE.BufferGeometry().setFromPoints([p1, p2]);
+      const lineMat = new THREE.LineBasicMaterial({ color: 0x00e5ff });
+      const line = new THREE.Line(lineGeo, lineMat);
+      g.add(line);
+
+      // Tick markers at ends
+      const tick1 = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(p1.x, p1.y - 0.6, p1.z),
+        new THREE.Vector3(p1.x, p1.y + 0.6, p1.z)
+      ]), lineMat);
+      const tick2 = new THREE.Line(new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(p2.x, p2.y - 0.6, p2.z),
+        new THREE.Vector3(p2.x, p2.y + 0.6, p2.z)
+      ]), lineMat);
+      g.add(tick1);
+      g.add(tick2);
+
+      return g;
+    }
+
+    // Width (300mm)
+    dimensionsGroup.add(createDimLine(new THREE.Vector3(-15, 14.5, 7.6), new THREE.Vector3(15, 14.5, 7.6), "300mm"));
+    // Height (250mm)
+    dimensionsGroup.add(createDimLine(new THREE.Vector3(-16.5, -12.5, 7.6), new THREE.Vector3(-16.5, 12.5, 7.6), "250mm"));
+    // Depth (150mm)
+    dimensionsGroup.add(createDimLine(new THREE.Vector3(16.5, -12.5, -7.5), new THREE.Vector3(16.5, -12.5, 7.5), "150mm"));
+
+    /* =========================================================================
+       EXPLODED ASSEMBLY ENGINE
+       ========================================================================= */
+    let explodedFactor = 0.0;
+    function setExplodedFactor(val) {
+      explodedFactor = parseFloat(val) / 100.0;
+      document.getElementById('explodeVal').textContent = `${Math.round(explodedFactor * 100)}%`;
+
+      explodedParts.forEach(p => {
+        p.obj.position.copy(p.basePos).addScaledVector(p.offset, explodedFactor);
+      });
+    }
+
+    /* =========================================================================
+       SEED DATA & PRESETS
+       ========================================================================= */
+    const SEEDS = [
+      { id: "01", name: "ALPHA-01", sn: "A34-E9", batt: 2, ind: "LIT: FRK", chamber: "KEY" },
+      { id: "02", name: "BRAVO-02", sn: "B82-K4", batt: 1, ind: "UNLIT: CAR", chamber: "BATTERY" },
+      { id: "03", name: "CHARLIE-03", sn: "Z91-U3", batt: 0, ind: "LIT: FRK", chamber: "PADLOCK" },
+      { id: "04", name: "DELTA-04", sn: "H45-T8", batt: 2, ind: "UNLIT: CAR", chamber: "WOOD" },
+      { id: "05", name: "ECHO-05", sn: "E12-O7", batt: 1, ind: "LIT: FRK", chamber: "SPIKY" },
+      { id: "06", name: "FOXTROT-06", sn: "R77-X2", batt: 2, ind: "UNLIT: CAR", chamber: "KEY" },
+      { id: "07", name: "GOLF-07", sn: "I83-V5", batt: 0, ind: "UNLIT: CAR", chamber: "BATTERY" },
+      { id: "08", name: "HOTEL-08", sn: "M52-W6", batt: 1, ind: "LIT: FRK", chamber: "PADLOCK" },
+      { id: "09", name: "INDIA-09", sn: "U99-Y1", batt: 2, ind: "LIT: FRK", chamber: "WOOD" },
+      { id: "10", name: "JULIET-10", sn: "C31-D4", batt: 0, ind: "UNLIT: CAR", chamber: "SPIKY" },
+      { id: "11", name: "KILO-11", sn: "O48-P7", batt: 1, ind: "UNLIT: CAR", chamber: "KEY" },
+      { id: "12", name: "LIMA-12", sn: "N66-Q0", batt: 2, ind: "LIT: FRK", chamber: "BATTERY" }
+    ];
+
+    function loadSeed(idx) {
+      const s = SEEDS[parseInt(idx)];
+      playSfx('button');
+
+      // Update SN & Indicator
+      snMesh.material.map = makeTextBadgeTexture(s.sn, 'SN / SERIAL', false);
+      snMesh.material.needsUpdate = true;
+
+      const isLit = s.ind.includes('LIT');
+      indMesh.material.map = makeTextBadgeTexture(s.ind, 'INDICATOR', isLit);
+      indMesh.material.needsUpdate = true;
+
+      // Update Batteries
+      battMeshes[0].visible = (s.batt >= 1);
+      battMeshes[1].visible = (s.batt >= 2);
+
+      // Update Chamber
+      setMysteryObject(s.chamber);
+
+      inspectModule('seed');
+    }
+
+    /* =========================================================================
+       INSPECTION DRAWER HUD LOGIC
+       ========================================================================= */
+    function inspectModule(type, extra = {}) {
+      const tag = document.getElementById('drawerTag');
+      const title = document.getElementById('drawerTitle');
+      const desc = document.getElementById('drawerDesc');
+      const specs = document.getElementById('drawerSpecs');
+
+      if (type === 'wire') {
+        tag.textContent = 'MODULE 01';
+        title.textContent = `WIRE SLOT #${extra.index + 1}`;
+        desc.innerHTML = `
+          <strong>TACTILE WIRE & TEXTURE ASSEMBLY:</strong><br>
+          5 horizontal wires held between 10 wooden clothespins. Only <strong>EXACTLY ONE</strong> wire must be unclipped to defuse the module.<br><br>
+          • <strong>Texture Badge:</strong> Hidden tactile swatch beside the slot. Blind feels this to identify the wire without vision!
+        `;
+        specs.innerHTML = `
+          <strong>DIY HARDWARE SPECS:</strong><br>
+          • 10 wooden clothespins (or binder clips)<br>
+          • 6 colored shoelaces (Red, Blue, Yellow, Green, White, Black)<br>
+          • 5 Velcro-backed texture patches<br>
+          • Slot pitch: 25mm spacing
+        `;
+      } else if (type === 'dial') {
+        tag.textContent = 'MODULE 02';
+        title.textContent = `${extra.name}`;
+        desc.innerHTML = `
+          <strong>3D SHAPE ROTARY DIAL:</strong><br>
+          Plastic bottle cap with raised foam/cardboard shape (Triangle, Square, Circle) mounted on a brass fastener brad. Rotates in 90° clicks (UP, RIGHT, DOWN, LEFT).<br><br>
+          • <strong>Blind Feedback:</strong> Raised tactile bump on pointer tip.<br>
+          • <strong>Deaf Feedback:</strong> White painted notch visible from distance.
+        `;
+        specs.innerHTML = `
+          <strong>DIY HARDWARE SPECS:</strong><br>
+          • 3 plastic bottle caps<br>
+          • 3 brass paper brads<br>
+          • Raised 3D shapes: ▲ Triangle, ■ Square, ● Circle<br>
+          • Center pitch: 35mm
+        `;
+      } else if (type === 'switch') {
+        tag.textContent = 'MODULE 03';
+        title.textContent = `${extra.name}`;
+        desc.innerHTML = `
+          <strong>FOUR TOGGLE SWITCHES:</strong><br>
+          Numbered 1, 2, 3, 4 from left to right. Set by solving the Serial Number vowel rule and indicator tag modifiers.<br><br>
+          • <strong>Blind Feedback:</strong> Feels lever arm angled UP or DOWN.<br>
+          • <strong>Deaf Feedback:</strong> Clear visual line of sight.
+        `;
+        specs.innerHTML = `
+          <strong>DIY HARDWARE SPECS:</strong><br>
+          • 4 cheap mechanical rocker or toggle switches (or popsicle sticks pinned on brads)<br>
+          • Switch pitch: 25mm spacing
+        `;
+      } else if (type === 'chamber') {
+        tag.textContent = 'CHAMBER 01';
+        title.textContent = `MYSTERY SENSORY CHAMBER`;
+        desc.innerHTML = `
+          <strong>10cm × 10cm SENSORY BOX HOLE:</strong><br>
+          Cut into the right-hand panel of the bomb. Blind reaches their arm inside without seeing, feeling the single hidden object.<br><br>
+          • <strong>Active Object:</strong> <strong>${activeObjectKey}</strong><br>
+          • <strong>Cover Flap:</strong> Dark sock sleeve prevents any teammate from peeking.
+        `;
+        specs.innerHTML = `
+          <strong>DIY HARDWARE SPECS:</strong><br>
+          • 10cm × 10cm cut-out with taped edges<br>
+          • 1 dark tube sock or felt flap sleeve<br>
+          • 5 Objects: Key, Battery, Spiky Ball, Wood Block, Padlock
+        `;
+      } else if (type === 'seed') {
+        tag.textContent = 'CONFIG LOADED';
+        title.textContent = `SEED #${document.getElementById('seedSelect').options[document.getElementById('seedSelect').selectedIndex].text}`;
+        desc.innerHTML = `
+          <strong>COMPLETE GAME SETUP READY:</strong><br>
+          The 3D model is now synced with this official tournament seed. Check the Serial, Battery count, Indicator tag, and Chamber object.
+        `;
+      }
+    }
+
+    /* =========================================================================
+       MOBILE DRAWER & TOAST MANAGEMENT
+       ========================================================================= */
+    const leftToolbar = document.getElementById('leftToolbar');
+    const rightDrawer = document.getElementById('rightDrawer');
+    const drawerBackdrop = document.getElementById('drawerBackdrop');
+    const selectionToast = document.getElementById('selectionToast');
+    const toastText = document.getElementById('toastText');
+    let toastTimeout = null;
+
+    function toggleDrawer(side) {
+      if (side === 'left') {
+        const isOpen = leftToolbar.classList.contains('open');
+        closeAllDrawers();
+        if (!isOpen) {
+          leftToolbar.classList.add('open');
+          drawerBackdrop.classList.add('active');
+          document.getElementById('btnMobileTools')?.classList.add('active');
+        }
+      } else if (side === 'right') {
+        const isOpen = rightDrawer.classList.contains('open');
+        closeAllDrawers();
+        if (!isOpen) {
+          rightDrawer.classList.add('open');
+          drawerBackdrop.classList.add('active');
+          document.getElementById('btnMobileInspect')?.classList.add('active');
+        }
+      }
+      playSfx('button');
+    }
+
+    function openDrawer(side) {
+      closeAllDrawers();
+      if (side === 'left') {
+        leftToolbar.classList.add('open');
+        drawerBackdrop.classList.add('active');
+        document.getElementById('btnMobileTools')?.classList.add('active');
+      } else if (side === 'right') {
+        rightDrawer.classList.add('open');
+        drawerBackdrop.classList.add('active');
+        document.getElementById('btnMobileInspect')?.classList.add('active');
+      }
+      playSfx('button');
+    }
+
+    function closeAllDrawers() {
+      leftToolbar.classList.remove('open');
+      rightDrawer.classList.remove('open');
+      drawerBackdrop.classList.remove('active');
+      document.getElementById('btnMobileTools')?.classList.remove('active');
+      document.getElementById('btnMobileInspect')?.classList.remove('active');
+    }
+
+    function showToast(msg) {
+      if (!selectionToast || !toastText) return;
+      toastText.textContent = msg;
+      selectionToast.classList.add('show');
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        selectionToast.classList.remove('show');
+      }, 3500);
+    }
+
+    /* =========================================================================
+       INTERACTION RAYCASTER (Touch / Click to Cut Wire / Flip Switch / Rotate Dial)
+       Uses tap distance threshold so dragging to orbit doesn't accidentally trigger parts
+       ========================================================================= */
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    let pointerStartX = 0;
+    let pointerStartY = 0;
+    let pointerStartTime = 0;
+
+    window.addEventListener('pointerdown', (e) => {
+      pointerStartX = e.clientX;
+      pointerStartY = e.clientY;
+      pointerStartTime = performance.now();
+    }, { passive: true });
+
+    window.addEventListener('pointerup', (e) => {
+      // Ignore if clicking on UI panels, buttons or drawers
+      if (e.target.closest('.top-bar, .left-toolbar, .right-drawer, .bottom-bar, .mobile-hud-bar, .selection-toast, .drawer-close-btn')) return;
+
+      const dist = Math.hypot(e.clientX - pointerStartX, e.clientY - pointerStartY);
+      const elapsed = performance.now() - pointerStartTime;
+      // Filter out drags/swipes meant for OrbitControls
+      if (dist > 8 || elapsed > 450) return;
+
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(faceplateGroup.children, true);
+
+      if (intersects.length > 0) {
+        let hit = null;
+        for (let i = 0; i < intersects.length; i++) {
+          if (intersects[i].object.userData && intersects[i].object.userData.type) {
+            hit = intersects[i].object.userData;
+            break;
+          }
+        }
+
+        if (hit) {
+          if (hit.type === 'wire') {
+            const wObj = wireObjects[hit.index];
+            wObj.isCut = !wObj.isCut;
+            wObj.mesh.visible = !wObj.isCut;
+            playSfx('snip');
+            inspectModule('wire', { index: hit.index });
+            showToast(`Wire #${hit.index + 1} (${wObj.isCut ? 'SNIPPED' : 'INTACT'})`);
+          } else if (hit.type === 'dial') {
+            const dObj = dialObjects[hit.index];
+            dObj.angleIndex = (dObj.angleIndex + 1) % 4;
+            dObj.group.rotation.z = -dObj.angleIndex * (Math.PI / 2);
+            playSfx('switch');
+            inspectModule('dial', { name: dObj.shape + ' DIAL' });
+            showToast(`${dObj.shape} Dial Rotated`);
+          } else if (hit.type === 'switch') {
+            const sObj = switchObjects[hit.index];
+            sObj.isUp = !sObj.isUp;
+            sObj.lever.rotation.x = sObj.isUp ? -0.55 : 0.55;
+            playSfx('switch');
+            inspectModule('switch', { name: `SWITCH #${hit.index + 1}` });
+            showToast(`Switch #${hit.index + 1} (${sObj.isUp ? 'UP' : 'DOWN'})`);
+          }
+        }
+      }
+    });
+
+    function resetAllInteractives() {
+      wireObjects.forEach(w => {
+        w.isCut = false;
+        w.mesh.visible = true;
+      });
+      dialObjects.forEach(d => {
+        d.angleIndex = 0;
+        d.group.rotation.z = 0;
+      });
+      switchObjects.forEach(s => {
+        s.isUp = true;
+        s.lever.rotation.x = -0.55;
+      });
+      playSfx('chime');
+    }
+
+    /* =========================================================================
+       VIEWING MODES & CAMERA PRESETS
+       ========================================================================= */
+    let currentRenderMode = 'shaded';
+    function setRenderMode(mode) {
+      currentRenderMode = mode;
+      document.querySelectorAll('.tool-btn').forEach(b => {
+        if (b.id && b.id.startsWith('btnMode')) b.classList.remove('active');
+      });
+      document.getElementById('btnMode' + mode.charAt(0).toUpperCase() + mode.slice(1)).classList.add('active');
+
+      if (mode === 'blueprint') {
+        scene.background = new THREE.Color(0x061120);
+        boxMesh.material = new THREE.MeshBasicMaterial({ color: 0x0a2240, wireframe: true });
+        faceMesh.material = new THREE.MeshBasicMaterial({ color: 0x051b33, wireframe: true });
+      } else if (mode === 'xray') {
+        scene.background = new THREE.Color(0x080c14);
+        boxMesh.material = new THREE.MeshStandardMaterial({
+          color: 0x1f364d,
+          transparent: true,
+          opacity: 0.28,
+          roughness: 0.2
+        });
+        faceMesh.material = new THREE.MeshStandardMaterial({
+          color: 0x1f364d,
+          transparent: true,
+          opacity: 0.35,
+          roughness: 0.2
+        });
+      } else if (mode === 'wireframe') {
+        scene.background = new THREE.Color(0x04060a);
+        boxMesh.material = new THREE.MeshBasicMaterial({ color: 0x00e5ff, wireframe: true });
+        faceMesh.material = new THREE.MeshBasicMaterial({ color: 0xffaa00, wireframe: true });
+      } else { // Shaded
+        scene.background = new THREE.Color(0x0a0e16);
+        boxMesh.material = matCardboard;
+        faceMesh.material = matDarkPlate;
+      }
+      playSfx('button');
+    }
+
+    function snapCamera(view) {
+      playSfx('button');
+      if (view === 'iso') {
+        tweenCamera(new THREE.Vector3(28, 22, 42), new THREE.Vector3(0, 0, 0));
+      } else if (view === 'front') {
+        tweenCamera(new THREE.Vector3(0, 0, 48), new THREE.Vector3(0, 0, 0));
+      } else if (view === 'side') {
+        tweenCamera(new THREE.Vector3(45, 0, 0), new THREE.Vector3(0, 0, 0));
+        inspectModule('chamber');
+      } else if (view === 'top') {
+        tweenCamera(new THREE.Vector3(0, 48, 12), new THREE.Vector3(0, 0, 0));
+      }
+    }
+
+    function tweenCamera(targetPos, targetLookAt) {
+      const startPos = camera.position.clone();
+      const startTime = performance.now();
+      const dur = 600;
+
+      function anim(now) {
+        const elapsed = now - startTime;
+        const progress = Math.min(elapsed / dur, 1);
+        const ease = 0.5 - Math.cos(progress * Math.PI) / 2;
+
+        camera.position.lerpVectors(startPos, targetPos, ease);
+        controls.target.copy(targetLookAt);
+        controls.update();
+
+        if (progress < 1) requestAnimationFrame(anim);
+      }
+      requestAnimationFrame(anim);
+    }
+
+    let dimensionsVisible = true;
+    function toggleDimensions() {
+      dimensionsVisible = !dimensionsVisible;
+      dimensionsGroup.visible = dimensionsVisible;
+      document.getElementById('btnDimensions').classList.toggle('active', dimensionsVisible);
+      document.getElementById('btnDimensions').textContent = dimensionsVisible ? 'DIMENSION LINES [ON]' : 'DIMENSION LINES [OFF]';
+      playSfx('button');
+    }
+
+    let autoRotate = false;
+    function toggleAutoRotate() {
+      autoRotate = !autoRotate;
+      controls.autoRotate = autoRotate;
+      controls.autoRotateSpeed = 1.5;
+      document.getElementById('btnAutoRotate').classList.toggle('active', autoRotate);
+      document.getElementById('btnAutoRotate').textContent = autoRotate ? 'AUTO-ROTATE [ON]' : 'AUTO-ROTATE [OFF]';
+      playSfx('button');
+    }
+
+    /* =========================================================================
+       ANIMATION LOOP & RESIZE
+       ========================================================================= */
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    // Initialize with Seed #01
+    loadSeed(0);
+    animate();
+  </script>
+</body>
+</html>

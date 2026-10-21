@@ -1,0 +1,1256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+  <meta name="theme-color" content="#06080b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Bomb Console">
+  <meta name="format-detection" content="telephone=no">
+  <title>ORDNANCE DEFUSAL CONSOLE // TWM-04</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Inter:wght@400;600;800;900&display=swap');
+
+    :root {
+      --bg-black: #06080b;
+      --panel-bg: #0f141d;
+      --panel-border: #1f2838;
+      --screen-glass: #050202;
+      --led-red: #ff1c1c;
+      --led-red-glow: rgba(255, 28, 28, 0.85);
+      --led-red-dim: #260505;
+      --led-green: #00e676;
+      --led-amber: #ffaa00;
+      --text-main: #f1f5f9;
+      --text-muted: #64748b;
+      --font-display: 'Share Tech Mono', monospace;
+      --font-ui: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-black);
+      background-image: 
+        radial-gradient(circle at 50% 30%, rgba(255, 28, 28, 0.04) 0%, transparent 60%),
+        linear-gradient(180deg, #06080b 0%, #0d121a 100%);
+      color: var(--text-main);
+      font-family: var(--font-ui);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem 2.5rem;
+      overflow-x: hidden;
+      transition: background-color 0.12s ease;
+    }
+
+    body.emergency-alarm {
+      animation: emergencyPulse 1.25s infinite alternate;
+    }
+
+    body.flash-strike {
+      background-color: #550000 !important;
+    }
+
+    body.state-exploded {
+      background-color: #260000;
+      background-image: radial-gradient(circle at 50% 50%, rgba(255, 20, 20, 0.3) 0%, transparent 70%);
+    }
+
+    body.state-defused {
+      background-image: radial-gradient(circle at 50% 50%, rgba(0, 230, 118, 0.12) 0%, transparent 70%);
+    }
+
+    @keyframes emergencyPulse {
+      0% { box-shadow: inset 0 0 30px rgba(255, 0, 0, 0.04); }
+      100% { box-shadow: inset 0 0 110px rgba(255, 25, 25, 0.35); }
+    }
+
+    header {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 1.1rem;
+      border-bottom: 1px solid var(--panel-border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+    }
+
+    .status-orb {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.8);
+      transition: all 0.2s;
+    }
+
+    .status-orb.armed {
+      background: var(--led-red);
+      box-shadow: 0 0 14px var(--led-red);
+    }
+
+    .status-orb.safe {
+      background: var(--led-green);
+      box-shadow: 0 0 14px var(--led-green);
+    }
+
+    .brand-title {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .state-badge {
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      padding: 0.35rem 0.9rem;
+      border-radius: 3px;
+      background: #131924;
+      border: 1px solid #283448;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .state-badge.armed {
+      color: var(--led-red);
+      border-color: rgba(255, 28, 28, 0.6);
+      background: rgba(255, 28, 28, 0.08);
+    }
+
+    .state-badge.defused {
+      color: var(--led-green);
+      border-color: rgba(0, 230, 118, 0.6);
+      background: rgba(0, 230, 118, 0.08);
+    }
+
+    .state-badge.exploded {
+      color: #fff;
+      background: var(--led-red);
+      border-color: var(--led-red);
+    }
+
+    main {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.4rem;
+      margin: 1rem 0;
+    }
+
+    .bomb-casing {
+      background: linear-gradient(145deg, #161c27, #0d1118);
+      border: 2px solid #263346;
+      border-radius: 10px;
+      padding: 2.2rem 3rem;
+      box-shadow: 
+        0 25px 60px rgba(0,0,0,0.9),
+        inset 0 1px 0 rgba(255,255,255,0.06);
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 3rem;
+      position: relative;
+    }
+
+    .corner-bolt {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #232c3d;
+      border: 1px solid #080b10;
+      position: absolute;
+    }
+    .corner-bolt.tl { top: 12px; left: 12px; }
+    .corner-bolt.tr { top: 12px; right: 12px; }
+    .corner-bolt.bl { bottom: 12px; left: 12px; }
+    .corner-bolt.br { bottom: 12px; right: 12px; }
+
+    .timer-frame {
+      background: var(--screen-glass);
+      border: 4px solid #1a222f;
+      border-radius: 6px;
+      padding: 1.5rem 2.8rem;
+      box-shadow: inset 0 6px 30px rgba(0,0,0,0.95);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .timer-readout {
+      font-family: var(--font-display);
+      font-size: 7.8rem;
+      line-height: 1;
+      color: var(--led-red);
+      text-shadow: 
+        0 0 22px var(--led-red-glow),
+        0 0 50px rgba(255, 28, 28, 0.35);
+      letter-spacing: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .timer-readout.safe {
+      color: var(--led-green);
+      text-shadow: 
+        0 0 22px rgba(0, 230, 118, 0.85),
+        0 0 50px rgba(0, 230, 118, 0.35);
+    }
+
+    .strike-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.9rem;
+      background: #090d13;
+      border: 2px solid #1a2230;
+      border-radius: 6px;
+      padding: 1.4rem 2rem;
+      box-shadow: inset 0 3px 15px rgba(0,0,0,0.8);
+    }
+
+    .strike-heading {
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      letter-spacing: 3px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    .strike-row {
+      display: flex;
+      gap: 1.1rem;
+    }
+
+    .strike-cell {
+      width: 66px;
+      height: 66px;
+      background: #110505;
+      border: 2px solid #241111;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 3rem;
+      font-weight: 900;
+      color: var(--led-red-dim);
+      transition: all 0.12s ease;
+    }
+
+    .strike-cell.lit {
+      background: rgba(255, 28, 28, 0.18);
+      border-color: var(--led-red);
+      color: var(--led-red);
+      text-shadow: 0 0 16px var(--led-red);
+      box-shadow: 0 0 24px rgba(255, 28, 28, 0.55);
+    }
+
+    .config-strip {
+      background: var(--panel-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 8px;
+      padding: 1.1rem 1.6rem;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .config-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+
+    .config-lead {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .config-code {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      color: var(--led-amber);
+      letter-spacing: 1.5px;
+      font-weight: 700;
+    }
+
+    .token-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .token {
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      background: #151c27;
+      border: 1px solid #263346;
+      padding: 0.2rem 0.6rem;
+      border-radius: 3px;
+      color: #cbd5e1;
+    }
+
+    .token strong {
+      color: #fff;
+    }
+
+    .config-sub {
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      color: #8da2bb;
+    }
+
+    .control-row {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 0.85rem;
+    }
+
+    .btn-action {
+      background: linear-gradient(180deg, #1b2331 0%, #131923 100%);
+      border: 1px solid #28364b;
+      border-radius: 6px;
+      padding: 0.95rem 0.6rem;
+      color: var(--text-main);
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      letter-spacing: 1px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.12s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+
+    .btn-action:hover {
+      background: linear-gradient(180deg, #242f42 0%, #19212f 100%);
+      border-color: #3f5475;
+      transform: translateY(-1px);
+    }
+
+    .btn-action:active {
+      transform: translateY(1px);
+    }
+
+    .btn-action .shortcut {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      font-weight: normal;
+    }
+
+    .btn-action.arm {
+      border-color: rgba(255, 170, 0, 0.5);
+      color: var(--led-amber);
+    }
+
+    .btn-action.strike {
+      border-color: rgba(255, 28, 28, 0.55);
+      color: #ff6e6e;
+    }
+
+    .btn-action.defuse {
+      border-color: rgba(0, 230, 118, 0.55);
+      color: var(--led-green);
+    }
+
+    .foley-strip {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+      justify-content: space-between;
+      background: #090c12;
+      border: 1px solid #19212c;
+      padding: 0.65rem 1.2rem;
+      border-radius: 6px;
+    }
+
+    .foley-title {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+
+    .foley-group {
+      display: flex;
+      gap: 0.55rem;
+    }
+
+    .btn-foley {
+      background: #121822;
+      border: 1px solid #222d3d;
+      color: #94a3b8;
+      padding: 0.35rem 0.75rem;
+      border-radius: 4px;
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .btn-foley:hover {
+      color: #fff;
+      border-color: #384962;
+      background: #18202d;
+    }
+
+    footer {
+      width: 100%;
+      max-width: 1100px;
+      display: flex;
+      justify-content: space-between;
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--panel-border);
+      padding-top: 0.9rem;
+    }
+
+    /* Audio unlock banner */
+    .audio-unlock-banner {
+      width: 100%;
+      max-width: 1100px;
+      background: linear-gradient(90deg, rgba(255, 170, 0, 0.22), rgba(255, 170, 0, 0.08));
+      border: 1px solid var(--led-amber);
+      color: var(--led-amber);
+      padding: 0.65rem 1rem;
+      border-radius: 6px;
+      font-family: var(--font-display);
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      cursor: pointer;
+      margin-bottom: 0.9rem;
+      animation: pulseBanner 2.2s infinite ease-in-out;
+      touch-action: manipulation;
+    }
+    .audio-unlock-banner.hidden {
+      display: none;
+    }
+    @keyframes pulseBanner {
+      0%, 100% { box-shadow: 0 0 10px rgba(255,170,0,0.2); }
+      50% { box-shadow: 0 0 24px rgba(255,170,0,0.55); }
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 0.6rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .nav-pill {
+      background: #141b26;
+      border: 1px solid #00d2ff;
+      color: #00e5ff;
+      padding: 0.45rem 0.85rem;
+      border-radius: 4px;
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      text-decoration: none;
+      letter-spacing: 1px;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.15s ease;
+      touch-action: manipulation;
+      min-height: 38px;
+    }
+    .nav-pill:active {
+      background: rgba(0, 229, 255, 0.2);
+    }
+
+    .seed-nav-group {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    @media (max-width: 860px) {
+      body {
+        padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+        justify-content: flex-start;
+        gap: 0.9rem;
+      }
+      header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+        padding-bottom: 0.75rem;
+      }
+      .brand {
+        justify-content: space-between;
+      }
+      .brand-title {
+        font-size: clamp(0.95rem, 4.2vw, 1.25rem);
+        letter-spacing: 1.5px;
+      }
+      .header-actions {
+        justify-content: space-between;
+        width: 100%;
+      }
+      .bomb-casing {
+        grid-template-columns: 1fr;
+        padding: 1.2rem 1rem;
+        gap: 1.2rem;
+      }
+      .corner-bolt {
+        display: none;
+      }
+      .timer-frame {
+        padding: 0.85rem 1rem;
+      }
+      .timer-readout {
+        font-size: clamp(3.2rem, 16vw, 5.8rem);
+        letter-spacing: 3px;
+      }
+      .strike-panel {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 0.85rem 1.2rem;
+        width: 100%;
+      }
+      .strike-row {
+        gap: 0.8rem;
+      }
+      .strike-cell {
+        width: 58px;
+        height: 58px;
+        font-size: 2.3rem;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+      .config-strip {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+        padding: 1rem;
+      }
+      .seed-nav-group {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.6rem;
+      }
+      .control-row {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.65rem;
+      }
+      .btn-action {
+        min-height: 54px;
+        padding: 0.85rem 0.5rem;
+        font-size: 0.85rem;
+        touch-action: manipulation;
+      }
+      .btn-action:active {
+        transform: scale(0.98);
+      }
+      .foley-strip {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.65rem;
+        padding: 0.85rem;
+      }
+      .foley-group {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+      }
+      .btn-foley {
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.76rem;
+        touch-action: manipulation;
+      }
+      footer {
+        flex-direction: column;
+        gap: 0.4rem;
+        text-align: center;
+        font-size: 0.68rem;
+        padding: 0.75rem 0;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .timer-readout {
+        font-size: clamp(2.7rem, 13vw, 3.8rem);
+        letter-spacing: 2px;
+      }
+      .token-row {
+        gap: 0.35rem;
+      }
+      .token {
+        font-size: 0.72rem;
+        padding: 0.15rem 0.45rem;
+      }
+      .config-sub {
+        font-size: 0.74rem;
+        line-height: 1.4;
+      }
+      .control-row {
+        grid-template-columns: 1fr 1fr;
+      }
+      .btn-foley {
+        font-size: 0.72rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="audioUnlockBanner" class="audio-unlock-banner" onclick="unlockAudio()">
+    <div style="display:flex; align-items:center; gap:0.5rem;">
+      <span style="font-size:1.15rem;">🔊</span>
+      <span><strong>TAP TO ACTIVATE MISSION AUDIO</strong> (Mobile Browser Requirement)</span>
+    </div>
+    <span style="border:1px solid currentColor; padding:0.25rem 0.6rem; border-radius:4px; font-weight:700; font-size:0.75rem;">ENABLE AUDIO</span>
+  </div>
+
+  <header>
+    <div class="brand">
+      <div id="statusOrb" class="status-orb"></div>
+      <span class="brand-title">ORDNANCE DEFUSAL CONSOLE // TWM-04</span>
+    </div>
+    <div class="header-actions">
+      <a href="bomb_3d_schematic.html" class="nav-pill" target="_blank">📐 3D SCHEMATIC</a>
+      <a href="BOMB_DEFUSAL_MANUAL_PRINTABLE.html" class="nav-pill" style="border-color:#00e676; color:#00e676;" target="_blank">📖 MANUAL</a>
+      <div id="stateBadge" class="state-badge">STANDBY</div>
+    </div>
+  </header>
+
+  <main>
+    <div class="bomb-casing">
+      <div class="corner-bolt tl"></div>
+      <div class="corner-bolt tr"></div>
+      <div class="corner-bolt bl"></div>
+      <div class="corner-bolt br"></div>
+
+      <div class="timer-frame">
+        <div id="timerReadout" class="timer-readout">05:00</div>
+      </div>
+
+      <div class="strike-panel">
+        <div class="strike-heading">STRIKES</div>
+        <div class="strike-row">
+          <div id="cell1" class="strike-cell" onclick="toggleStrikeCell(1)" title="Tap to toggle strike 1">X</div>
+          <div id="cell2" class="strike-cell" onclick="toggleStrikeCell(2)" title="Tap to toggle strike 2">X</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="config-strip">
+      <div class="config-details">
+        <div class="config-lead">
+          <span id="configCode" class="config-code">CONFIGURATION #01 // ALPHA-01</span>
+          <div id="tokenRow" class="token-row">
+            <span class="token">SN: <strong>A34-E9</strong></span>
+            <span class="token">BATT: <strong>2</strong></span>
+            <span class="token">IND: <strong>LIT FRK</strong></span>
+            <span class="token">CHAMBER: <strong>KEY</strong></span>
+          </div>
+        </div>
+        <div id="configSub" class="config-sub">
+          WIRES: [1:Red/Sandpaper] [2:Blue/Bubble] [3:Yellow/Coin] [4:Green/Felt] [5:White/Card]  |  DIALS: ▲:UP ■:RIGHT ●:UP  |  SW: 1:U 2:D 3:D 4:U
+        </div>
+      </div>
+      <div class="seed-nav-group">
+        <button class="btn-action" onclick="cycleSeed(-1)" style="min-width: 95px; padding: 0.65rem 0.8rem;">
+          <span>◀ PREV</span>
+          <span class="shortcut">[P]</span>
+        </button>
+        <button class="btn-action" onclick="cycleSeed(1)" style="min-width: 95px; padding: 0.65rem 0.8rem;">
+          <span>NEXT ▶</span>
+          <span class="shortcut">[N]</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="control-row">
+      <button id="btnArm" class="btn-action arm" onclick="toggleTimer()">
+        <span id="btnArmLabel">ARM TIMER</span>
+        <span class="shortcut">[SPACE]</span>
+      </button>
+
+      <button class="btn-action strike" onclick="triggerStrike()">
+        <span>STRIKE</span>
+        <span class="shortcut">[X] / [1]</span>
+      </button>
+
+      <button class="btn-action" onclick="undoStrike()">
+        <span>CLEAR STRIKE</span>
+        <span class="shortcut">[Z]</span>
+      </button>
+
+      <button class="btn-action" onclick="playModuleSolve()">
+        <span>MODULE SOLVED</span>
+        <span class="shortcut">[C]</span>
+      </button>
+
+      <button class="btn-action defuse" onclick="triggerDefused()">
+        <span>BOMB DEFUSED</span>
+        <span class="shortcut">[V] / [D]</span>
+      </button>
+
+      <button class="btn-action" onclick="resetSystem()">
+        <span>RESET</span>
+        <span class="shortcut">[R]</span>
+      </button>
+    </div>
+
+    <div class="foley-strip">
+      <span class="foley-title">ORDNANCE SOUND TRIGGERS</span>
+      <div class="foley-group">
+        <a href="bomb_3d_schematic.html" target="_blank" class="btn-foley" style="text-decoration:none; color:#00e5ff; border-color:#00d2ff;">📐 3D SCHEMATIC</a>
+        <button class="btn-foley" onclick="playSfx('snip')">✂️ WIRE SNIP [W]</button>
+        <button class="btn-foley" onclick="playSfx('switch')">⚡ SWITCH FLIP [S]</button>
+        <button class="btn-foley" onclick="playSfx('button')">🔘 BUTTON PRESS [B]</button>
+        <button class="btn-foley" onclick="toggleEmergencyAlarm()">🚨 SIREN [E]</button>
+        <button class="btn-foley" id="muteBtn" onclick="toggleMute()">🔇 MUTE [M]</button>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <span>HOTKEYS: [SPACE] ARM/PAUSE · [X] STRIKE · [C] SOLVE CHIME · [V] DEFUSED · [R] RESET · [N/P] SEEDS</span>
+    <span>ORIGINAL KTANE SOUND SYSTEM // MOBILE OPTIMIZED</span>
+  </footer>
+
+  <script>
+    /* =====================================================================
+       OFFICIAL AUDIO FILES EXTRACTED DIRECTLY FROM THE GAME
+       - doublebeep.wav: Original vocal "beep-boop" ticking (0 Strikes, 1.0x)
+       - doublebeep_1.25.wav: Original vocal ticking (1 Strike, 1.25x)
+       - singlebeep.wav: Original single vocal beep (2 Strikes, 1.5x)
+       - Strike.wav: Original error strike buzzer
+       - BombExploded.wav: Original detonation blast
+       - BombDefused.wav + GameOverFanfare.wav: Original defusal victory sequence
+       - EmergencyAlarm.wav: Original emergency siren loop (< 60s)
+       - CorrectChime.wav, WireSnip.wav, LightSwitch.wav, ButtonPress.wav
+       ===================================================================== */
+    const SFX = {
+      doublebeep: new Audio('audio/doublebeep.wav'),
+      doublebeep125: new Audio('audio/doublebeep_1.25.wav'),
+      singlebeep: new Audio('audio/singlebeep.wav'),
+      strike: new Audio('audio/Strike.wav'),
+      explode: new Audio('audio/BombExploded.wav'),
+      defused: new Audio('audio/BombDefused.wav'),
+      fanfare: new Audio('audio/GameOverFanfare.wav'),
+      emergency: new Audio('audio/EmergencyAlarm.wav'),
+      chime: new Audio('audio/CorrectChime.wav'),
+      snip: new Audio('audio/WireSnip.wav'),
+      switch: new Audio('audio/LightSwitch.wav'),
+      button: new Audio('audio/ButtonPress.wav')
+    };
+
+    SFX.emergency.loop = true;
+
+    Object.values(SFX).forEach(audio => {
+      audio.preload = 'auto';
+      audio.load();
+    });
+
+    let isMuted = false;
+    let emergencyActive = false;
+    let audioUnlocked = false;
+
+    function unlockAudio() {
+      if (audioUnlocked) return;
+      audioUnlocked = true;
+      const banner = document.getElementById('audioUnlockBanner');
+      if (banner) {
+        banner.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+        banner.style.opacity = '0';
+        banner.style.transform = 'translateY(-10px)';
+        setTimeout(() => banner.classList.add('hidden'), 320);
+      }
+      // Prime audio elements for iOS Safari / Android Chrome
+      Object.values(SFX).forEach(audio => {
+        try {
+          audio.muted = true;
+          const p = audio.play();
+          if (p !== undefined) {
+            p.then(() => {
+              audio.pause();
+              audio.currentTime = 0;
+              audio.muted = false;
+            }).catch(() => {
+              audio.muted = false;
+            });
+          } else {
+            audio.muted = false;
+          }
+        } catch (e) {
+          audio.muted = false;
+        }
+      });
+      if (navigator.vibrate) {
+        try { navigator.vibrate(30); } catch (e) {}
+      }
+    }
+
+    // Attach unlock trigger to all first touch/click events
+    ['touchstart', 'touchend', 'pointerdown', 'click', 'keydown'].forEach(evt => {
+      window.addEventListener(evt, unlockAudio, { once: true, passive: true });
+    });
+
+    function playSound(audioObj, vol = 1.0) {
+      if (isMuted) return;
+      unlockAudio();
+      try {
+        // Try playing primary audio or clone
+        const clone = audioObj.cloneNode();
+        clone.volume = vol;
+        const p = clone.play();
+        if (p !== undefined) {
+          p.catch(() => {
+            // Fallback to direct element if clone fails on mobile
+            audioObj.currentTime = 0;
+            audioObj.volume = vol;
+            audioObj.play().catch(() => {});
+          });
+        }
+      } catch (e) {
+        try {
+          audioObj.currentTime = 0;
+          audioObj.volume = vol;
+          audioObj.play().catch(() => {});
+        } catch (err) {}
+      }
+    }
+
+    function playSfx(type) {
+      if (SFX[type]) {
+        playSound(SFX[type], 0.9);
+        if (navigator.vibrate) {
+          try { navigator.vibrate(25); } catch (e) {}
+        }
+      }
+    }
+
+    function playModuleSolve() {
+      playSound(SFX.chime, 0.95);
+      if (navigator.vibrate) {
+        try { navigator.vibrate([40, 40, 60]); } catch (e) {}
+      }
+    }
+
+    function startEmergencyAlarm() {
+      if (isMuted || emergencyActive || gameEnded) return;
+      emergencyActive = true;
+      document.body.classList.add('emergency-alarm');
+      SFX.emergency.currentTime = 0;
+      SFX.emergency.volume = 0.65;
+      SFX.emergency.play().catch(() => {});
+    }
+
+    function stopEmergencyAlarm() {
+      emergencyActive = false;
+      document.body.classList.remove('emergency-alarm');
+      SFX.emergency.pause();
+      SFX.emergency.currentTime = 0;
+    }
+
+    function toggleEmergencyAlarm() {
+      if (emergencyActive) {
+        stopEmergencyAlarm();
+      } else {
+        startEmergencyAlarm();
+      }
+    }
+
+    /* =====================================================================
+       CLOCK & TIMER ENGINE (Exact KTANE speed scaling & format)
+       ===================================================================== */
+    const INITIAL_DURATION = 300.0;
+    let timeRemaining = INITIAL_DURATION;
+    let strikes = 0;
+    let timerRunning = false;
+    let gameEnded = false;
+    let lastBeepSecond = Math.floor(INITIAL_DURATION);
+    let lastFrameTime = null;
+    let animId = null;
+
+    const timerReadout = document.getElementById('timerReadout');
+    const stateBadge = document.getElementById('stateBadge');
+    const statusOrb = document.getElementById('statusOrb');
+    const btnArmLabel = document.getElementById('btnArmLabel');
+    const cell1 = document.getElementById('cell1');
+    const cell2 = document.getElementById('cell2');
+
+    function getMultiplier() {
+      if (strikes === 0) return 1.0;
+      if (strikes === 1) return 1.25;
+      return 1.5;
+    }
+
+    function playVocalBeep() {
+      if (isMuted) return;
+      if (strikes === 0) {
+        playSound(SFX.doublebeep, 0.9);
+      } else if (strikes === 1) {
+        playSound(SFX.doublebeep125, 0.92);
+      } else {
+        playSound(SFX.singlebeep, 0.95);
+      }
+    }
+
+    function formatTimeDisplay(t) {
+      if (t < 0) t = 0;
+      if (t < 60.0) {
+        const s = Math.floor(t);
+        const h = Math.floor((t * 100) % 100);
+        return `${String(s).padStart(2, '0')}.${String(h).padStart(2, '0')}`;
+      } else {
+        const m = Math.floor(t / 60);
+        const s = Math.floor(t % 60);
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+      }
+    }
+
+    function timerLoop(now) {
+      if (!timerRunning || gameEnded) return;
+
+      if (lastFrameTime !== null) {
+        const dt = (now - lastFrameTime) / 1000.0;
+        timeRemaining -= dt * getMultiplier();
+
+        if (timeRemaining <= 60.0 && timeRemaining > 0 && !emergencyActive) {
+          startEmergencyAlarm();
+        }
+
+        if (timeRemaining <= 0) {
+          timeRemaining = 0;
+          timerReadout.textContent = "00.00";
+          detonateBomb();
+          return;
+        }
+
+        const secInt = Math.floor(timeRemaining);
+        if (secInt !== lastBeepSecond) {
+          lastBeepSecond = secInt;
+          playVocalBeep();
+        }
+
+        timerReadout.textContent = formatTimeDisplay(timeRemaining);
+      }
+
+      lastFrameTime = now;
+      animId = requestAnimationFrame(timerLoop);
+    }
+
+    function toggleTimer() {
+      if (gameEnded) return;
+
+      if (timerRunning) {
+        timerRunning = false;
+        lastFrameTime = null;
+        if (animId) cancelAnimationFrame(animId);
+        stopEmergencyAlarm();
+        btnArmLabel.textContent = 'RESUME';
+        stateBadge.textContent = 'PAUSED';
+        stateBadge.className = 'state-badge';
+        statusOrb.className = 'status-orb';
+      } else {
+        timerRunning = true;
+        lastFrameTime = performance.now();
+        btnArmLabel.textContent = 'PAUSE';
+        stateBadge.textContent = 'ARMED';
+        stateBadge.className = 'state-badge armed';
+        statusOrb.className = 'status-orb armed';
+        playVocalBeep();
+        if (timeRemaining <= 60.0) startEmergencyAlarm();
+        animId = requestAnimationFrame(timerLoop);
+      }
+    }
+
+    function triggerStrike() {
+      if (gameEnded) return;
+
+      strikes++;
+      document.body.classList.add('flash-strike');
+      setTimeout(() => document.body.classList.remove('flash-strike'), 280);
+
+      if (navigator.vibrate) {
+        try { navigator.vibrate([80, 50, 80]); } catch (e) {}
+      }
+
+      if (strikes === 1) {
+        cell1.classList.add('lit');
+        playSound(SFX.strike, 1.0);
+      } else if (strikes === 2) {
+        cell2.classList.add('lit');
+        playSound(SFX.strike, 1.0);
+      } else if (strikes >= 3) {
+        playSound(SFX.strike, 1.0);
+        detonateBomb();
+      }
+    }
+
+    function undoStrike() {
+      if (gameEnded || strikes <= 0) return;
+      if (strikes === 2) cell2.classList.remove('lit');
+      if (strikes === 1) cell1.classList.remove('lit');
+      strikes--;
+      if (navigator.vibrate) {
+        try { navigator.vibrate(30); } catch (e) {}
+      }
+    }
+
+    function toggleStrikeCell(cellNumber) {
+      unlockAudio();
+      if (gameEnded) return;
+      if (cellNumber === 1) {
+        if (strikes >= 1) {
+          undoStrike();
+        } else {
+          triggerStrike();
+        }
+      } else if (cellNumber === 2) {
+        if (strikes >= 2) {
+          undoStrike();
+        } else {
+          if (strikes === 0) triggerStrike();
+          triggerStrike();
+        }
+      }
+    }
+
+    function detonateBomb() {
+      gameEnded = true;
+      timerRunning = false;
+      if (animId) cancelAnimationFrame(animId);
+      stopEmergencyAlarm();
+
+      if (navigator.vibrate) {
+        try { navigator.vibrate([150, 80, 300]); } catch (e) {}
+      }
+
+      document.body.classList.add('state-exploded');
+      stateBadge.textContent = 'DETONATED';
+      stateBadge.className = 'state-badge exploded';
+      statusOrb.className = 'status-orb armed';
+      btnArmLabel.textContent = 'EXPLODED';
+
+      if (!isMuted) {
+        SFX.explode.currentTime = 0;
+        SFX.explode.volume = 1.0;
+        SFX.explode.play().catch(() => {});
+      }
+    }
+
+    function triggerDefused() {
+      if (gameEnded) return;
+      gameEnded = true;
+      timerRunning = false;
+      if (animId) cancelAnimationFrame(animId);
+      stopEmergencyAlarm();
+
+      document.body.classList.add('state-defused');
+      timerReadout.classList.add('safe');
+      stateBadge.textContent = 'DEFUSED';
+      stateBadge.className = 'state-badge defused';
+      statusOrb.className = 'status-orb safe';
+      btnArmLabel.textContent = 'DISARMED';
+
+      if (!isMuted) {
+        SFX.defused.currentTime = 0;
+        SFX.defused.volume = 1.0;
+        SFX.defused.play().catch(() => {});
+        setTimeout(() => {
+          if (gameEnded && document.body.classList.contains('state-defused') && !isMuted) {
+            SFX.fanfare.currentTime = 0;
+            SFX.fanfare.volume = 0.9;
+            SFX.fanfare.play().catch(() => {});
+          }
+        }, 1600);
+      }
+    }
+
+    function resetSystem() {
+      if (animId) cancelAnimationFrame(animId);
+      stopEmergencyAlarm();
+
+      Object.values(SFX).forEach(a => {
+        a.pause();
+        a.currentTime = 0;
+      });
+
+      timerRunning = false;
+      gameEnded = false;
+      timeRemaining = INITIAL_DURATION;
+      lastBeepSecond = Math.floor(INITIAL_DURATION);
+      lastFrameTime = null;
+      strikes = 0;
+
+      document.body.classList.remove('state-exploded', 'state-defused', 'flash-strike');
+      timerReadout.classList.remove('safe');
+      timerReadout.textContent = formatTimeDisplay(INITIAL_DURATION);
+
+      cell1.classList.remove('lit');
+      cell2.classList.remove('lit');
+
+      stateBadge.textContent = 'STANDBY';
+      stateBadge.className = 'state-badge';
+      statusOrb.className = 'status-orb';
+      btnArmLabel.textContent = 'ARM TIMER';
+    }
+
+    function toggleMute() {
+      isMuted = !isMuted;
+      document.getElementById('muteBtn').textContent = isMuted ? 'UNMUTE [M]' : 'MUTE [M]';
+      if (isMuted) {
+        SFX.emergency.pause();
+      } else if (emergencyActive && timerRunning) {
+        SFX.emergency.play().catch(() => {});
+      }
+    }
+
+    /* =====================================================================
+       12 SEED CONFIGURATIONS
+       ===================================================================== */
+    const SEEDS = [
+      {
+        id: "01 // ALPHA-01",
+        sn: "A34-E9", batt: "2", ind: "LIT FRK", chamber: "KEY",
+        layout: "WIRES: [1:Red/Sandpaper] [2:Blue/Bubble] [3:Yellow/Coin] [4:Green/Felt] [5:White/Card]  |  DIALS: ▲:UP ■:RIGHT ●:UP  |  SW: 1:U 2:D 3:D 4:U"
+      },
+      {
+        id: "02 // BRAVO-02",
+        sn: "B82-K4", batt: "1", ind: "UNLIT CAR", chamber: "BATTERY",
+        layout: "WIRES: [1:Blue/Felt] [2:Green/Sandpaper] [3:White/Bubble] [4:Red/Card] [5:Yellow/Coin]  |  DIALS: ▲:LEFT ■:UP ●:DOWN  |  SW: 1:D 2:U 3:U 4:D"
+      },
+      {
+        id: "03 // CHARLIE-03",
+        sn: "Z91-U3", batt: "0", ind: "LIT FRK", chamber: "PADLOCK",
+        layout: "WIRES: [1:Yellow/Card] [2:Red/Coin] [3:Green/Sandpaper] [4:Blue/Bubble] [5:White/Felt]  |  DIALS: ▲:UP ■:UP ●:UP  |  SW: 1:U 2:U 3:D 4:D"
+      },
+      {
+        id: "04 // DELTA-04",
+        sn: "H45-T8", batt: "2", ind: "UNLIT CAR", chamber: "WOOD BLOCK",
+        layout: "WIRES: [1:Green/Bubble] [2:Black/Felt] [3:Red/Sandpaper] [4:Yellow/Coin] [5:Blue/Card]  |  DIALS: ▲:RIGHT ■:LEFT ●:UP  |  SW: 1:D 2:D 3:U 4:U"
+      },
+      {
+        id: "05 // ECHO-05",
+        sn: "E12-O7", batt: "1", ind: "LIT FRK", chamber: "SPIKY BALL",
+        layout: "WIRES: [1:White/Coin] [2:Blue/Sandpaper] [3:Green/Card] [4:Red/Bubble] [5:Black/Felt]  |  DIALS: ▲:DOWN ■:RIGHT ●:LEFT  |  SW: 1:U 2:D 3:U 4:D"
+      },
+      {
+        id: "06 // FOXTROT-06",
+        sn: "R77-X2", batt: "2", ind: "UNLIT CAR", chamber: "KEY",
+        layout: "WIRES: [1:Black/Sandpaper] [2:Yellow/Bubble] [3:Blue/Felt] [4:Green/Coin] [5:Red/Card]  |  DIALS: ▲:UP ■:LEFT ●:RIGHT  |  SW: 1:D 2:U 3:D 4:U"
+      },
+      {
+        id: "07 // GOLF-07",
+        sn: "I83-V5", batt: "0", ind: "UNLIT CAR", chamber: "BATTERY",
+        layout: "WIRES: [1:Red/Card] [2:Red/Bubble] [3:Blue/Coin] [4:Yellow/Sandpaper] [5:White/Felt]  |  DIALS: ▲:RIGHT ■:RIGHT ●:UP  |  SW: 1:U 2:U 3:U 4:D"
+      },
+      {
+        id: "08 // HOTEL-08",
+        sn: "M52-W6", batt: "1", ind: "LIT FRK", chamber: "PADLOCK",
+        layout: "WIRES: [1:Blue/Coin] [2:White/Felt] [3:Red/Sandpaper] [4:Green/Bubble] [5:Yellow/Card]  |  DIALS: ▲:LEFT ■:DOWN ●:DOWN  |  SW: 1:D 2:D 3:D 4:U"
+      },
+      {
+        id: "09 // INDIA-09",
+        sn: "U99-Y1", batt: "2", ind: "LIT FRK", chamber: "WOOD BLOCK",
+        layout: "WIRES: [1:Green/Card] [2:Yellow/Sandpaper] [3:Blue/Bubble] [4:White/Coin] [5:Red/Felt]  |  DIALS: ▲:UP ■:RIGHT ●:LEFT  |  SW: 1:U 2:D 3:D 4:D"
+      },
+      {
+        id: "10 // JULIET-10",
+        sn: "C31-D4", batt: "0", ind: "UNLIT CAR", chamber: "SPIKY BALL",
+        layout: "WIRES: [1:Black/Bubble] [2:Red/Felt] [3:Green/Sandpaper] [4:Blue/Coin] [5:Yellow/Card]  |  DIALS: ▲:DOWN ■:UP ●:UP  |  SW: 1:D 2:U 3:U 4:U"
+      },
+      {
+        id: "11 // KILO-11",
+        sn: "O48-P7", batt: "1", ind: "UNLIT CAR", chamber: "KEY",
+        layout: "WIRES: [1:White/Sandpaper] [2:Blue/Card] [3:Yellow/Felt] [4:Red/Coin] [5:Green/Bubble]  |  DIALS: ▲:RIGHT ■:LEFT ●:DOWN  |  SW: 1:U 2:U 3:D 4:U"
+      },
+      {
+        id: "12 // LIMA-12",
+        sn: "N66-Q0", batt: "2", ind: "LIT FRK", chamber: "BATTERY",
+        layout: "WIRES: [1:Yellow/Coin] [2:Green/Felt] [3:White/Sandpaper] [4:Black/Bubble] [5:Blue/Card]  |  DIALS: ▲:UP ■:UP ●:RIGHT  |  SW: 1:D 2:D 3:U 4:D"
+      }
+    ];
+
+    let seedIndex = 0;
+
+    function cycleSeed(step) {
+      seedIndex = (seedIndex + step + SEEDS.length) % SEEDS.length;
+      const s = SEEDS[seedIndex];
+      document.getElementById('configCode').textContent = `CONFIGURATION #${s.id}`;
+      document.getElementById('tokenRow').innerHTML = `
+        <span class="token">SN: <strong>${s.sn}</strong></span>
+        <span class="token">BATT: <strong>${s.batt}</strong></span>
+        <span class="token">IND: <strong>${s.ind}</strong></span>
+        <span class="token">CHAMBER: <strong>${s.chamber}</strong></span>
+      `;
+      document.getElementById('configSub').textContent = s.layout;
+      playSfx('button');
+    }
+
+    /* =====================================================================
+       KEYBOARD SHORTCUTS
+       ===================================================================== */
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        toggleTimer();
+      } else if (e.key === 'x' || e.key === 'X' || e.key === '1') {
+        triggerStrike();
+      } else if (e.key === 'z' || e.key === 'Z') {
+        undoStrike();
+      } else if (e.key === 'c' || e.key === 'C') {
+        playModuleSolve();
+      } else if (e.key === 'v' || e.key === 'V' || e.key === 'd' || e.key === 'D') {
+        triggerDefused();
+      } else if (e.key === 'r' || e.key === 'R') {
+        resetSystem();
+      } else if (e.key === 'n' || e.key === 'N') {
+        cycleSeed(1);
+      } else if (e.key === 'p' || e.key === 'P') {
+        cycleSeed(-1);
+      } else if (e.key === 'w' || e.key === 'W') {
+        playSfx('snip');
+      } else if (e.key === 's' || e.key === 'S') {
+        playSfx('switch');
+      } else if (e.key === 'b' || e.key === 'B') {
+        playSfx('button');
+      } else if (e.key === 'e' || e.key === 'E') {
+        toggleEmergencyAlarm();
+      } else if (e.key === 'm' || e.key === 'M') {
+        toggleMute();
+      }
+    });
+  </script>
+</body>
+</html>

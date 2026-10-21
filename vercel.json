@@ -1,0 +1,36 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/schematic", "destination": "/bomb_3d_schematic.html" },
+    { "source": "/cad", "destination": "/bomb_3d_schematic.html" },
+    { "source": "/3d", "destination": "/bomb_3d_schematic.html" },
+    { "source": "/manual", "destination": "/BOMB_DEFUSAL_MANUAL_PRINTABLE.html" },
+    { "source": "/dossier", "destination": "/BOMB_DEFUSAL_MANUAL_PRINTABLE.html" },
+    { "source": "/pdf", "destination": "/BOMB_DEFUSAL_MANUAL.pdf" }
+  ],
+  "headers": [
+    {
+      "source": "/audio/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" },
+        { "key": "Accept-Ranges", "value": "bytes" }
+      ]
+    },
+    {
+      "source": "/lib/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+      ]
+    }
+  ]
+}
