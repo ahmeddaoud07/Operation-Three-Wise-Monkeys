@@ -412,6 +412,11 @@
       font-family: var(--font-display);
       font-size: 0.75rem;
       cursor: pointer;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      touch-action: manipulation;
       transition: all 0.12s;
     }
 
@@ -481,10 +486,11 @@
       letter-spacing: 1px;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 0.4rem;
       transition: all 0.15s ease;
       touch-action: manipulation;
-      min-height: 38px;
+      min-height: 44px;
     }
     .nav-pill:active {
       background: rgba(0, 229, 255, 0.2);
@@ -643,8 +649,8 @@
       <span class="brand-title">ORDNANCE DEFUSAL CONSOLE // TWM-04</span>
     </div>
     <div class="header-actions">
-      <a href="bomb_3d_schematic.html" class="nav-pill" target="_blank">📐 3D SCHEMATIC</a>
-      <a href="BOMB_DEFUSAL_MANUAL_PRINTABLE.html" class="nav-pill" style="border-color:#00e676; color:#00e676;" target="_blank">📖 MANUAL</a>
+      <a href="bomb_3d_schematic.html" class="nav-pill" id="linkSchematicHeader" target="_blank" rel="noopener">📐 3D SCHEMATIC</a>
+      <a href="BOMB_DEFUSAL_MANUAL_PRINTABLE.html" class="nav-pill" style="border-color:#00e676; color:#00e676;" target="_blank" rel="noopener">📖 MANUAL</a>
       <div id="stateBadge" class="state-badge">STANDBY</div>
     </div>
   </header>
@@ -731,7 +737,7 @@
     <div class="foley-strip">
       <span class="foley-title">ORDNANCE SOUND TRIGGERS</span>
       <div class="foley-group">
-        <a href="bomb_3d_schematic.html" target="_blank" class="btn-foley" style="text-decoration:none; color:#00e5ff; border-color:#00d2ff;">📐 3D SCHEMATIC</a>
+        <a href="bomb_3d_schematic.html" id="linkSchematicFoley" target="_blank" rel="noopener" class="btn-foley" style="text-decoration:none; color:#00e5ff; border-color:#00d2ff;">📐 3D SCHEMATIC</a>
         <button class="btn-foley" onclick="playSfx('snip')">✂️ WIRE SNIP [W]</button>
         <button class="btn-foley" onclick="playSfx('switch')">⚡ SWITCH FLIP [S]</button>
         <button class="btn-foley" onclick="playSfx('button')">🔘 BUTTON PRESS [B]</button>
@@ -748,16 +754,30 @@
 
   <script>
     /* =====================================================================
-       OFFICIAL AUDIO FILES EXTRACTED DIRECTLY FROM THE GAME
-       - doublebeep.wav: Original vocal "beep-boop" ticking (0 Strikes, 1.0x)
-       - doublebeep_1.25.wav: Original vocal ticking (1 Strike, 1.25x)
-       - singlebeep.wav: Original single vocal beep (2 Strikes, 1.5x)
-       - Strike.wav: Original error strike buzzer
-       - BombExploded.wav: Original detonation blast
-       - BombDefused.wav + GameOverFanfare.wav: Original defusal victory sequence
-       - EmergencyAlarm.wav: Original emergency siren loop (< 60s)
-       - CorrectChime.wav, WireSnip.wav, LightSwitch.wav, ButtonPress.wav
+       OFFICIAL AUDIO ENGINE: DUAL WEB AUDIO API + HTML5 AUDIO SYSTEM
+       - Pre-decoded AudioBuffers for instant zero-latency playback & no cloneNode leaks
+       - Safe resume() and silent oscillator priming for iOS Safari & Android Chrome
+       - Synthetic oscillator fallback for ticking, strikes, chimes and explosions
        ===================================================================== */
+    const SFX_MAP = {
+      doublebeep: 'audio/doublebeep.wav',
+      doublebeep125: 'audio/doublebeep_1.25.wav',
+      singlebeep: 'audio/singlebeep.wav',
+      strike: 'audio/Strike.wav',
+      explode: 'audio/BombExploded.wav',
+      defused: 'audio/BombDefused.wav',
+      fanfare: 'audio/GameOverFanfare.wav',
+      emergency: 'audio/EmergencyAlarm.wav',
+      chime: 'audio/CorrectChime.wav',
+      snip: 'audio/WireSnip.wav',
+      switch: 'audio/LightSwitch.wav',
+      button: 'audio/ButtonPress.wav'
+    };
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+    const audioBuffers = {};
+
     const SFX = {
       doublebeep: new Audio('audio/doublebeep.wav'),
       doublebeep125: new Audio('audio/doublebeep_1.25.wav'),
@@ -777,89 +797,201 @@
 
     Object.values(SFX).forEach(audio => {
       audio.preload = 'auto';
-      audio.load();
     });
 
     let isMuted = false;
     let emergencyActive = false;
     let audioUnlocked = false;
 
-    function unlockAudio() {
-      if (audioUnlocked) return;
-      audioUnlocked = true;
-      const banner = document.getElementById('audioUnlockBanner');
-      if (banner) {
-        banner.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-        banner.style.opacity = '0';
-        banner.style.transform = 'translateY(-10px)';
-        setTimeout(() => banner.classList.add('hidden'), 320);
-      }
-      // Prime audio elements for iOS Safari / Android Chrome
-      Object.values(SFX).forEach(audio => {
+    function initAudioContext() {
+      if (!audioCtx && AudioContextClass) {
         try {
-          audio.muted = true;
-          const p = audio.play();
-          if (p !== undefined) {
-            p.then(() => {
-              audio.pause();
-              audio.currentTime = 0;
-              audio.muted = false;
-            }).catch(() => {
-              audio.muted = false;
-            });
-          } else {
-            audio.muted = false;
-          }
-        } catch (e) {
-          audio.muted = false;
-        }
-      });
-      if (navigator.vibrate) {
-        try { navigator.vibrate(30); } catch (e) {}
+          audioCtx = new AudioContextClass();
+        } catch (e) {}
       }
     }
 
-    // Attach unlock trigger to all first touch/click events
+    function preloadWebAudioBuffers() {
+      if (!audioCtx) return;
+      Object.entries(SFX_MAP).forEach(([key, url]) => {
+        if (audioBuffers[key]) return;
+        fetch(url)
+          .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.arrayBuffer();
+          })
+          .then(ab => audioCtx.decodeAudioData(ab))
+          .then(decoded => { audioBuffers[key] = decoded; })
+          .catch(() => {});
+      });
+    }
+
+    function unlockAudio() {
+      initAudioContext();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+      if (!audioUnlocked && audioCtx) {
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          gain.gain.value = 0.001;
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.002);
+        } catch (e) {}
+      }
+
+      if (!audioUnlocked) {
+        audioUnlocked = true;
+        const banner = document.getElementById('audioUnlockBanner');
+        if (banner) {
+          banner.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+          banner.style.opacity = '0';
+          banner.style.transform = 'translateY(-10px)';
+          setTimeout(() => banner.classList.add('hidden'), 320);
+        }
+        preloadWebAudioBuffers();
+        // Prime HTML5 Audio elements
+        Object.values(SFX).forEach(audio => {
+          try {
+            audio.muted = true;
+            const p = audio.play();
+            if (p !== undefined) {
+              p.then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.muted = false;
+              }).catch(() => { audio.muted = false; });
+            } else {
+              audio.muted = false;
+            }
+          } catch (e) {
+            audio.muted = false;
+          }
+        });
+        if (navigator.vibrate) {
+          try { navigator.vibrate(30); } catch (e) {}
+        }
+      }
+    }
+
     ['touchstart', 'touchend', 'pointerdown', 'click', 'keydown'].forEach(evt => {
       window.addEventListener(evt, unlockAudio, { once: true, passive: true });
     });
 
-    function playSound(audioObj, vol = 1.0) {
-      if (isMuted) return;
-      unlockAudio();
+    // Synthetic audio fallback for offline or failed sound decodes
+    function playSyntheticSound(type) {
+      if (!audioCtx || isMuted) return;
       try {
-        // Try playing primary audio or clone
-        const clone = audioObj.cloneNode();
-        clone.volume = vol;
-        const p = clone.play();
-        if (p !== undefined) {
-          p.catch(() => {
-            // Fallback to direct element if clone fails on mobile
-            audioObj.currentTime = 0;
-            audioObj.volume = vol;
-            audioObj.play().catch(() => {});
+        const now = audioCtx.currentTime;
+        if (type === 'tick') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(880, now);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        } else if (type === 'strike') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(140, now);
+          gain.gain.setValueAtTime(0.6, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.35);
+        } else if (type === 'chime') {
+          [523.25, 659.25, 783.99].forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + i * 0.1);
+            gain.gain.setValueAtTime(0.4, now + i * 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.4);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now + i * 0.1);
+            osc.stop(now + i * 0.1 + 0.4);
           });
         }
-      } catch (e) {
+      } catch (e) {}
+    }
+
+    function playSoundKey(key, vol = 1.0) {
+      if (isMuted) return;
+      unlockAudio();
+
+      // Priority 1: Web Audio preloaded buffer (zero-latency, no clone memory leak)
+      if (audioCtx && audioBuffers[key]) {
+        try {
+          const src = audioCtx.createBufferSource();
+          src.buffer = audioBuffers[key];
+          const gainNode = audioCtx.createGain();
+          gainNode.gain.value = Math.max(0, Math.min(1.0, vol));
+          src.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          src.start(0);
+          return;
+        } catch (e) {}
+      }
+
+      // Priority 2: Preloaded HTML5 Audio element
+      const audioObj = SFX[key];
+      if (audioObj) {
+        try {
+          audioObj.currentTime = 0;
+          audioObj.volume = vol;
+          audioObj.play().catch(() => {
+            // Priority 3: Synthetic fallback if blocked
+            if (key.includes('beep')) playSyntheticSound('tick');
+            else if (key === 'strike') playSyntheticSound('strike');
+            else if (key === 'chime') playSyntheticSound('chime');
+          });
+        } catch (err) {
+          if (key.includes('beep')) playSyntheticSound('tick');
+          else if (key === 'strike') playSyntheticSound('strike');
+          else if (key === 'chime') playSyntheticSound('chime');
+        }
+      } else {
+        if (key.includes('beep')) playSyntheticSound('tick');
+        else if (key === 'strike') playSyntheticSound('strike');
+        else if (key === 'chime') playSyntheticSound('chime');
+      }
+    }
+
+    function playSound(audioObj, vol = 1.0) {
+      let matchedKey = null;
+      for (const [k, v] of Object.entries(SFX)) {
+        if (v === audioObj) { matchedKey = k; break; }
+      }
+      if (matchedKey) {
+        playSoundKey(matchedKey, vol);
+      } else {
         try {
           audioObj.currentTime = 0;
           audioObj.volume = vol;
           audioObj.play().catch(() => {});
-        } catch (err) {}
+        } catch (e) {}
       }
     }
 
     function playSfx(type) {
-      if (SFX[type]) {
-        playSound(SFX[type], 0.9);
-        if (navigator.vibrate) {
-          try { navigator.vibrate(25); } catch (e) {}
-        }
+      playSoundKey(type, 0.9);
+      if (navigator.vibrate) {
+        try { navigator.vibrate(25); } catch (e) {}
       }
     }
 
     function playModuleSolve() {
-      playSound(SFX.chime, 0.95);
+      playSoundKey('chime', 0.95);
       if (navigator.vibrate) {
         try { navigator.vibrate([40, 40, 60]); } catch (e) {}
       }
@@ -1204,8 +1336,8 @@
 
     let seedIndex = 0;
 
-    function cycleSeed(step) {
-      seedIndex = (seedIndex + step + SEEDS.length) % SEEDS.length;
+    function applySeed(idx) {
+      seedIndex = (idx + SEEDS.length) % SEEDS.length;
       const s = SEEDS[seedIndex];
       document.getElementById('configCode').textContent = `CONFIGURATION #${s.id}`;
       document.getElementById('tokenRow').innerHTML = `
@@ -1215,7 +1347,37 @@
         <span class="token">CHAMBER: <strong>${s.chamber}</strong></span>
       `;
       document.getElementById('configSub').textContent = s.layout;
+      updateCrossLinks();
+    }
+
+    function updateCrossLinks() {
+      const links = document.querySelectorAll('a[href*="bomb_3d_schematic"]');
+      links.forEach(a => {
+        a.href = `bomb_3d_schematic.html?seed=${seedIndex}`;
+      });
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('seed', seedIndex);
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {}
+    }
+
+    function cycleSeed(step) {
+      applySeed(seedIndex + step);
       playSfx('button');
+    }
+
+    // Initialize seed from URL param if provided
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const seedParam = urlParams.get('seed');
+      if (seedParam !== null && !isNaN(parseInt(seedParam, 10))) {
+        applySeed(parseInt(seedParam, 10));
+      } else {
+        updateCrossLinks();
+      }
+    } catch (e) {
+      updateCrossLinks();
     }
 
     /* =====================================================================

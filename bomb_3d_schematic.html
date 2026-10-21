@@ -53,6 +53,7 @@
       height: 100%;
       z-index: 1;
       display: block;
+      touch-action: none;
     }
 
     /* TOP HUD BAR */
@@ -490,7 +491,7 @@
       gap: 0.35rem;
       cursor: pointer;
       touch-action: manipulation;
-      min-height: 42px;
+      min-height: 44px;
       transition: all 0.12s;
     }
     .mobile-hud-btn:active {
@@ -572,12 +573,12 @@
         flex: 1 1 auto;
         font-size: 0.74rem;
         padding: 0.45rem 0.5rem;
-        min-height: 42px;
+        min-height: 44px;
       }
       .nav-btn {
         padding: 0.45rem 0.6rem;
         font-size: 0.72rem;
-        min-height: 42px;
+        min-height: 44px;
       }
       .left-toolbar {
         position: fixed;
@@ -666,10 +667,10 @@
         <option value="11">#12 // LIMA (Battery, Lit FRK, 2B)</option>
       </select>
 
-      <a href="index.html" class="nav-btn" target="_blank">
+      <a href="index.html" class="nav-btn" id="navTimerConsole" target="_blank" rel="noopener">
         <span>⏱️ TIMER CONSOLE</span>
       </a>
-      <a href="BOMB_DEFUSAL_MANUAL_PRINTABLE.html" class="nav-btn" target="_blank">
+      <a href="BOMB_DEFUSAL_MANUAL_PRINTABLE.html" class="nav-btn" target="_blank" rel="noopener">
         <span>📖 MANUAL</span>
       </a>
     </div>
@@ -811,8 +812,19 @@
 
   <script>
     /* =========================================================================
-       AUDIO SOUND EFFECTS
+       AUDIO SOUND EFFECTS (Web Audio API + HTMLAudioElement Fallback)
        ========================================================================= */
+    const SFX_FILES = {
+      snip: 'audio/WireSnip.wav',
+      switch: 'audio/LightSwitch.wav',
+      button: 'audio/ButtonPress.wav',
+      chime: 'audio/CorrectChime.wav'
+    };
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+    const audioBuffers = {};
+
     const SFX = {
       snip: new Audio('audio/WireSnip.wav'),
       switch: new Audio('audio/LightSwitch.wav'),
@@ -823,28 +835,63 @@
     let soundEnabled = true;
     let audioUnlocked = false;
 
-    function unlockAudio() {
-      if (audioUnlocked) return;
-      audioUnlocked = true;
-      Object.values(SFX).forEach(audio => {
+    function initAudioContext() {
+      if (!audioCtx && AudioContextClass) {
         try {
-          audio.muted = true;
-          const p = audio.play();
-          if (p !== undefined) {
-            p.then(() => {
-              audio.pause();
-              audio.currentTime = 0;
+          audioCtx = new AudioContextClass();
+        } catch (e) {}
+      }
+    }
+
+    function preloadWebAudio() {
+      if (!audioCtx) return;
+      Object.entries(SFX_FILES).forEach(([key, url]) => {
+        if (audioBuffers[key]) return;
+        fetch(url)
+          .then(res => res.arrayBuffer())
+          .then(buf => audioCtx.decodeAudioData(buf))
+          .then(decoded => { audioBuffers[key] = decoded; })
+          .catch(() => {});
+      });
+    }
+
+    function unlockAudio() {
+      initAudioContext();
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+      if (!audioUnlocked && audioCtx) {
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          gain.gain.value = 0.001;
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.002);
+        } catch (e) {}
+      }
+      if (!audioUnlocked) {
+        audioUnlocked = true;
+        preloadWebAudio();
+        Object.values(SFX).forEach(audio => {
+          try {
+            audio.muted = true;
+            const p = audio.play();
+            if (p !== undefined) {
+              p.then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+                audio.muted = false;
+              }).catch(() => { audio.muted = false; });
+            } else {
               audio.muted = false;
-            }).catch(() => {
-              audio.muted = false;
-            });
-          } else {
+            }
+          } catch (e) {
             audio.muted = false;
           }
-        } catch (e) {
-          audio.muted = false;
-        }
-      });
+        });
+      }
     }
 
     ['touchstart', 'touchend', 'pointerdown', 'click'].forEach(evt => {
@@ -852,26 +899,36 @@
     });
 
     function playSfx(name) {
-      if (!soundEnabled || !SFX[name]) return;
+      if (!soundEnabled) return;
       unlockAudio();
-      try {
-        const a = SFX[name].cloneNode();
-        a.volume = 0.8;
-        const p = a.play();
-        if (p !== undefined) {
-          p.catch(() => {
-            SFX[name].currentTime = 0;
-            SFX[name].volume = 0.8;
-            SFX[name].play().catch(() => {});
-          });
-        }
-      } catch (e) {
+
+      // Priority 1: Web Audio decoded buffer
+      if (audioCtx && audioBuffers[name]) {
         try {
-          SFX[name].currentTime = 0;
-          SFX[name].volume = 0.8;
-          SFX[name].play().catch(() => {});
-        } catch (err) {}
+          const source = audioCtx.createBufferSource();
+          source.buffer = audioBuffers[name];
+          const gainNode = audioCtx.createGain();
+          gainNode.gain.value = 0.8;
+          source.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          source.start(0);
+          if (navigator.vibrate) {
+            try { navigator.vibrate(25); } catch (e) {}
+          }
+          return;
+        } catch (e) {}
       }
+
+      // Priority 2: Direct HTMLAudioElement (no cloneNode leakage)
+      const a = SFX[name];
+      if (a) {
+        try {
+          a.currentTime = 0;
+          a.volume = 0.8;
+          a.play().catch(() => {});
+        } catch (e) {}
+      }
+
       if (navigator.vibrate) {
         try { navigator.vibrate(25); } catch (e) {}
       }
@@ -908,21 +965,26 @@
     scene.fog = new THREE.FogExp2(0x0a0e16, 0.008);
 
     const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(28, 22, 42);
+
+    function getCameraScale() {
+      const aspect = window.innerWidth / window.innerHeight;
+      return aspect < 1.0 ? Math.max(1.0, 0.92 / aspect) : 1.0;
+    }
+
+    const initCamScale = getCameraScale();
+    camera.position.set(28 * initCamScale, 22 * initCamScale, 42 * initCamScale);
 
     const controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.maxPolarAngle = Math.PI / 2 + 0.1;
-    controls.minDistance = 10;
-    controls.maxDistance = 120;
+    controls.minDistance = 12;
+    controls.maxDistance = 240;
     controls.target.set(0, 0, 0);
-    if (THREE.TOUCH) {
-      controls.touches = {
-        ONE: THREE.TOUCH.ROTATE,
-        TWO: THREE.TOUCH.DOLLY_PAN
-      };
-    }
+    controls.touches = {
+      ONE: (typeof THREE !== 'undefined' && THREE.TOUCH) ? THREE.TOUCH.ROTATE : 0,
+      TWO: (typeof THREE !== 'undefined' && THREE.TOUCH) ? THREE.TOUCH.DOLLY_PAN : 2
+    };
 
     /* =========================================================================
        LIGHTING
@@ -1164,6 +1226,7 @@
     const sleeve = new THREE.Mesh(sleeveGeo, sleeveMat);
     sleeve.rotation.z = Math.PI / 2;
     sleeve.position.set(-5.5, 0, 0);
+    sleeve.userData = { type: 'chamber' };
     holeGroup.add(sleeve);
 
     // Outer hole frame trim
@@ -1171,6 +1234,7 @@
     const trimMat = new THREE.MeshStandardMaterial({ color: 0x111620, roughness: 0.8 });
     const trim = new THREE.Mesh(trimGeo, trimMat);
     trim.rotation.y = Math.PI / 2;
+    trim.userData = { type: 'chamber' };
     holeGroup.add(trim);
 
     // Interior Chamber Shelf & Mystery Objects Container
@@ -1201,6 +1265,7 @@
     const snMat = new THREE.MeshBasicMaterial({ map: snTex });
     const snMesh = new THREE.Mesh(snGeo, snMat);
     snMesh.position.set(-8.5, 0, 0.05);
+    snMesh.userData = { type: 'clues', name: 'SERIAL NUMBER' };
     cluesGroup.add(snMesh);
 
     // Indicator badge
@@ -1209,6 +1274,7 @@
     const indMat = new THREE.MeshBasicMaterial({ map: indTex });
     const indMesh = new THREE.Mesh(indGeo, indMat);
     indMesh.position.set(1.5, 0, 0.05);
+    indMesh.userData = { type: 'clues', name: 'STATUS INDICATOR' };
     cluesGroup.add(indMesh);
 
     // Dual AA Battery Clips & Batteries
@@ -1597,8 +1663,13 @@
     ];
 
     function loadSeed(idx) {
-      const s = SEEDS[parseInt(idx)];
+      const num = parseInt(idx, 10);
+      const s = SEEDS[num];
+      if (!s) return;
       playSfx('button');
+
+      const sel = document.getElementById('seedSelect');
+      if (sel && sel.value !== String(num)) sel.value = String(num);
 
       // Update SN & Indicator
       snMesh.material.map = makeTextBadgeTexture(s.sn, 'SN / SERIAL', false);
@@ -1614,6 +1685,19 @@
 
       // Update Chamber
       setMysteryObject(s.chamber);
+
+      // Update Timer Console cross-link with active seed
+      const timerLink = document.getElementById('navTimerConsole');
+      if (timerLink) {
+        timerLink.href = `index.html?seed=${num}`;
+      }
+
+      // Sync URL parameter silently
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.set('seed', num);
+        window.history.replaceState({}, '', url.toString());
+      } catch (e) {}
 
       inspectModule('seed');
     }
@@ -1686,6 +1770,21 @@
           • 10cm × 10cm cut-out with taped edges<br>
           • 1 dark tube sock or felt flap sleeve<br>
           • 5 Objects: Key, Battery, Spiky Ball, Wood Block, Padlock
+        `;
+      } else if (type === 'clues') {
+        tag.textContent = 'CASING CLUES';
+        title.textContent = extra.name || 'EXTERIOR IDENTIFIERS';
+        desc.innerHTML = `
+          <strong>SERIAL NUMBER & STATUS INDICATOR:</strong><br>
+          Mounted on the top face of the casing. Deaf player reads these to communicate disarming rules to teammates.<br><br>
+          • <strong>Serial Number:</strong> Contains vowels / digits determining which dial and switch positions are safe.<br>
+          • <strong>Indicator:</strong> LIT (FRK) or UNLIT (CAR) modifying module disarming algorithms.
+        `;
+        specs.innerHTML = `
+          <strong>DEAF ROLE SPECIFICATIONS:</strong><br>
+          • Check for Vowel (A, E, I, O, U) in Serial Number<br>
+          • Check if final digit is Odd or Even<br>
+          • Shout spoken guidance directly to Blind technician
         `;
       } else if (type === 'seed') {
         tag.textContent = 'CONFIG LOADED';
@@ -1777,8 +1876,11 @@
     }, { passive: true });
 
     window.addEventListener('pointerup', (e) => {
-      // Ignore if clicking on UI panels, buttons or drawers
-      if (e.target.closest('.top-bar, .left-toolbar, .right-drawer, .bottom-bar, .mobile-hud-bar, .selection-toast, .drawer-close-btn')) return;
+      // Ignore if clicking on UI panels, buttons, drawers or if a drawer is currently open
+      if (leftToolbar.classList.contains('open') || rightDrawer.classList.contains('open') ||
+          e.target.closest('.top-bar, .left-toolbar, .right-drawer, .bottom-bar, .mobile-hud-bar, .selection-toast, .drawer-close-btn, .drawer-backdrop')) {
+        return;
+      }
 
       const dist = Math.hypot(e.clientX - pointerStartX, e.clientY - pointerStartY);
       const elapsed = performance.now() - pointerStartTime;
@@ -1789,7 +1891,8 @@
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
 
       raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObjects(faceplateGroup.children, true);
+      const targets = [faceplateGroup, holeGroup, cluesGroup, chamberObjectContainer];
+      const intersects = raycaster.intersectObjects(targets, true);
 
       if (intersects.length > 0) {
         let hit = null;
@@ -1822,6 +1925,16 @@
             playSfx('switch');
             inspectModule('switch', { name: `SWITCH #${hit.index + 1}` });
             showToast(`Switch #${hit.index + 1} (${sObj.isUp ? 'UP' : 'DOWN'})`);
+          } else if (hit.type === 'chamber') {
+            playSfx('button');
+            inspectModule('chamber');
+            showToast(`Mystery Chamber (${activeObjectKey})`);
+            openDrawer('right');
+          } else if (hit.type === 'clues') {
+            playSfx('button');
+            inspectModule('clues', { name: hit.name });
+            showToast(`${hit.name} Inspected`);
+            openDrawer('right');
           }
         }
       }
@@ -1886,15 +1999,16 @@
 
     function snapCamera(view) {
       playSfx('button');
+      const scale = getCameraScale();
       if (view === 'iso') {
-        tweenCamera(new THREE.Vector3(28, 22, 42), new THREE.Vector3(0, 0, 0));
+        tweenCamera(new THREE.Vector3(28 * scale, 22 * scale, 42 * scale), new THREE.Vector3(0, 0, 0));
       } else if (view === 'front') {
-        tweenCamera(new THREE.Vector3(0, 0, 48), new THREE.Vector3(0, 0, 0));
+        tweenCamera(new THREE.Vector3(0, 0, 48 * scale), new THREE.Vector3(0, 0, 0));
       } else if (view === 'side') {
-        tweenCamera(new THREE.Vector3(45, 0, 0), new THREE.Vector3(0, 0, 0));
+        tweenCamera(new THREE.Vector3(45 * scale, 0, 0), new THREE.Vector3(0, 0, 0));
         inspectModule('chamber');
       } else if (view === 'top') {
-        tweenCamera(new THREE.Vector3(0, 48, 12), new THREE.Vector3(0, 0, 0));
+        tweenCamera(new THREE.Vector3(0, 48 * scale, 12 * scale), new THREE.Vector3(0, 0, 0));
       }
     }
 
@@ -1939,10 +2053,19 @@
     /* =========================================================================
        ANIMATION LOOP & RESIZE
        ========================================================================= */
+    let lastAspect = window.innerWidth / window.innerHeight;
     window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      const newAspect = window.innerWidth / window.innerHeight;
+      camera.aspect = newAspect;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
+
+      if ((lastAspect < 1.0 && newAspect >= 1.0) || (lastAspect >= 1.0 && newAspect < 1.0)) {
+        const factor = newAspect < 1.0 ? (0.92 / newAspect) : (lastAspect / 0.92);
+        camera.position.multiplyScalar(Math.min(Math.max(factor, 0.6), 2.0));
+        controls.update();
+      }
+      lastAspect = newAspect;
     });
 
     function animate() {
@@ -1951,8 +2074,15 @@
       renderer.render(scene, camera);
     }
 
-    // Initialize with Seed #01
-    loadSeed(0);
+    // Initialize with Seed from URL parameter or default Seed #01
+    const urlParams = new URLSearchParams(window.location.search);
+    const seedParam = urlParams.get('seed');
+    if (seedParam !== null && !isNaN(parseInt(seedParam, 10))) {
+      const initialSeed = Math.max(0, Math.min(SEEDS.length - 1, parseInt(seedParam, 10)));
+      loadSeed(initialSeed);
+    } else {
+      loadSeed(0);
+    }
     animate();
   </script>
 </body>

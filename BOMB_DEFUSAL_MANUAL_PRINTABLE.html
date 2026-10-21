@@ -30,6 +30,11 @@
       font-size: 10.5pt;
     }
 
+    html {
+      scroll-behavior: smooth;
+      scroll-padding-top: 105px;
+    }
+
     .page {
       page-break-after: always;
       position: relative;
@@ -42,6 +47,7 @@
       padding: 1.4rem;
       margin: 0 auto 1.5rem auto;
       max-width: 900px;
+      scroll-margin-top: 105px;
     }
 
     .doc-header {
@@ -184,7 +190,7 @@
     .print-bar {
       background: #111;
       color: #fff;
-      padding: 0.75rem 1.2rem;
+      padding: max(0.75rem, env(safe-area-inset-top)) max(1.2rem, env(safe-area-inset-right)) 0.75rem max(1.2rem, env(safe-area-inset-left));
       position: sticky;
       top: 0;
       z-index: 1000;
@@ -220,8 +226,10 @@
       text-decoration: none;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 0.35rem;
-      min-height: 38px;
+      min-height: 44px;
+      touch-action: manipulation;
     }
 
     .print-btn {
@@ -234,7 +242,10 @@
       cursor: pointer;
       border-radius: 4px;
       font-size: 0.88rem;
-      min-height: 38px;
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       touch-action: manipulation;
     }
 
@@ -257,9 +268,10 @@
       text-decoration: none;
       white-space: nowrap;
       font-family: inherit;
-      min-height: 34px;
+      min-height: 44px;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       touch-action: manipulation;
     }
 
@@ -272,13 +284,14 @@
     /* Mobile Float Back To Top */
     .back-to-top {
       position: fixed;
-      bottom: max(1rem, env(safe-area-inset-bottom));
-      right: max(1rem, env(safe-area-inset-right));
+      bottom: max(1.2rem, env(safe-area-inset-bottom));
+      right: max(1.2rem, env(safe-area-inset-right));
       background: #111;
       color: #fff;
       border: 1px solid #444;
-      width: 44px;
-      height: 44px;
+      width: 48px;
+      height: 48px;
+      min-height: 48px;
       border-radius: 50%;
       display: flex;
       align-items: center;
@@ -342,8 +355,8 @@
     <div class="print-bar-row1">
       <div class="print-bar-links">
         <span style="font-weight:bold; font-size:0.85rem; color:#fff;">📖 DEFUSAL MANUAL</span>
-        <a href="index.html" class="manual-nav-pill">⏱️ TIMER</a>
-        <a href="bomb_3d_schematic.html" class="manual-nav-pill">📐 3D CAD</a>
+        <a href="index.html" class="manual-nav-pill" id="manualTimerLink">⏱️ TIMER</a>
+        <a href="bomb_3d_schematic.html" class="manual-nav-pill" id="manualCadLink">📐 3D CAD</a>
       </div>
       <button class="print-btn" onclick="window.print()">🖨️ PRINT (PDF)</button>
     </div>
@@ -829,5 +842,17 @@
     </div>
   </div>
 
+  <script>
+    try {
+      const p = new URLSearchParams(window.location.search);
+      const s = p.get('seed');
+      if (s !== null && !isNaN(parseInt(s, 10))) {
+        const timerLink = document.getElementById('manualTimerLink');
+        const cadLink = document.getElementById('manualCadLink');
+        if (timerLink) timerLink.href = 'index.html?seed=' + s;
+        if (cadLink) cadLink.href = 'bomb_3d_schematic.html?seed=' + s;
+      }
+    } catch (e) {}
+  </script>
 </body>
 </html>
