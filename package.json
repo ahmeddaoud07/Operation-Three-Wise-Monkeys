@@ -1,7 +1,7 @@
 {
-  "name": "operation-three-wise-monkeys",
+  "name": "eidolon-monkey-game",
   "version": "1.0.0",
-  "description": "Operation: Three Wise Monkeys — 3-Player Cooperative Physical Bomb Defusal Game & 3D Hardware CAD Console",
+  "description": "Eidolon Monkey Game — 3-Player Cooperative Physical Bomb Defusal Game & 3D Hardware CAD Console",
   "main": "index.html",
   "scripts": {
     "start": "npx serve .",
