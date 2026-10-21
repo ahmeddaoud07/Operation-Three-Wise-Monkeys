@@ -1,7 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "cleanUrls": true,
-  "trailingSlash": false,
   "rewrites": [
     { "source": "/schematic", "destination": "/bomb_3d_schematic.html" },
     { "source": "/cad", "destination": "/bomb_3d_schematic.html" },
