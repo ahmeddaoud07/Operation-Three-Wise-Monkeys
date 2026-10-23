@@ -646,7 +646,7 @@
       <span class="brand-badge">HARDWARE CAD</span>
       <div>
         <div class="brand-title">EIDOLON MONKEY GAME</div>
-        <div class="brand-sub">3D INTERACTIVE DISPOSAL SCHEMATIC & DIY BLUEPRINT</div>
+        <div class="brand-sub">3D ORDNANCE SCHEMATIC // HARDWARE SPECIFICATION</div>
       </div>
     </div>
 
@@ -741,18 +741,18 @@
     </div>
 
     <div class="info-card" id="drawerDesc">
-      Click on any component (wires, dials, switches, mystery hole, clues) in the 3D model to inspect its DIY building specs, dimensions, and player handicap rules.
+      Select any component (wires, dials, switches, sensory chamber, exterior indicators) to inspect its hardware specifications, dimensions, and operational protocols.
     </div>
 
     <div class="role-grid" id="drawerRoles">
       <div class="role-row blind">
-        <span>🖐️ <strong>BLIND:</strong> Reaches into right-side hole; feels textures, dials & switches.</span>
+        <span>🖐️ <strong>BLIND:</strong> Reaches into right-side chamber; decodes tactile textures, dials & switches.</span>
       </div>
       <div class="role-row deaf">
-        <span>👁️ <strong>DEAF:</strong> Reads serial & indicators; shouts spoken orders to Blind.</span>
+        <span>👁️ <strong>DEAF:</strong> Reads serial & indicators; relays tactical directives to Blind.</span>
       </div>
       <div class="role-row mute">
-        <span>🤫 <strong>MUTE:</strong> Reads manual rules 3m away; mimes solutions via pure charades.</span>
+        <span>🤫 <strong>MUTE:</strong> Reads manual protocols; conveys disarming logic via silent charades.</span>
       </div>
     </div>
 
@@ -768,10 +768,10 @@
     </div>
 
     <div class="info-card" id="drawerSpecs">
-      <strong>DIY BUILD SPECIFICATIONS:</strong><br>
-      • Box size: 30cm W × 25cm H × 15cm D<br>
-      • Mystery Chamber hole: 10cm × 10cm on right face<br>
-      • Budget: Under $15 from household items
+      <strong>HARDWARE SPECIFICATIONS:</strong><br>
+      • Chassis dimensions: 30cm W × 25cm H × 15cm D<br>
+      • Mystery Chamber port: 10cm × 10cm on right chassis face<br>
+      • Modular casing: Rigid reinforced tactical enclosure
     </div>
   </aside>
 
@@ -834,6 +834,7 @@
 
     let soundEnabled = true;
     let audioUnlocked = false;
+    let keepAliveNode = null;
 
     function initAudioContext() {
       if (!audioCtx && AudioContextClass) {
@@ -843,64 +844,157 @@
       }
     }
 
+    function safeDecodeAudio(ab) {
+      return new Promise((resolve, reject) => {
+        if (!audioCtx) return reject(new Error('No AudioContext'));
+        try {
+          const res = audioCtx.decodeAudioData(ab, resolve, reject);
+          if (res && typeof res.then === 'function') {
+            res.then(resolve).catch(reject);
+          }
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
+
     function preloadWebAudio() {
+      initAudioContext();
       if (!audioCtx) return;
       Object.entries(SFX_FILES).forEach(([key, url]) => {
         if (audioBuffers[key]) return;
         fetch(url)
-          .then(res => res.arrayBuffer())
-          .then(buf => audioCtx.decodeAudioData(buf))
+          .then(res => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            return res.arrayBuffer();
+          })
+          .then(buf => safeDecodeAudio(buf))
           .then(decoded => { audioBuffers[key] = decoded; })
           .catch(() => {});
       });
     }
+
+    // Immediately initiate preloading on script execution so buffers are decoded before first user tap
+    preloadWebAudio();
 
     function unlockAudio() {
       initAudioContext();
       if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume().catch(() => {});
       }
+
       if (!audioUnlocked && audioCtx) {
+        // Play microscopic silent buffer to unlock iOS Safari hardware output pipeline
         try {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          gain.gain.value = 0.001;
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.start();
-          osc.stop(audioCtx.currentTime + 0.002);
+          const buffer = audioCtx.createBuffer(1, 1, 22050);
+          const source = audioCtx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(audioCtx.destination);
+          source.start(0);
+          audioUnlocked = true;
         } catch (e) {}
-      }
-      if (!audioUnlocked) {
-        audioUnlocked = true;
-        preloadWebAudio();
+
+        // Keep-alive silent loop to prevent mobile browsers from idling the audio subsystem
+        try {
+          if (!keepAliveNode && audioCtx) {
+            const silence = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+            keepAliveNode = audioCtx.createBufferSource();
+            keepAliveNode.buffer = silence;
+            keepAliveNode.loop = true;
+            keepAliveNode.connect(audioCtx.destination);
+            keepAliveNode.start(0);
+          }
+        } catch (e) {}
+
+        // Prime HTML5 Audio elements with .load() without flooding the browser with mass .play() calls
         Object.values(SFX).forEach(audio => {
           try {
-            audio.muted = true;
-            const p = audio.play();
-            if (p !== undefined) {
-              p.then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-                audio.muted = false;
-              }).catch(() => { audio.muted = false; });
-            } else {
-              audio.muted = false;
-            }
-          } catch (e) {
-            audio.muted = false;
-          }
+            audio.load();
+          } catch (e) {}
         });
+
+        if (navigator.vibrate) {
+          try { navigator.vibrate(25); } catch (e) {}
+        }
       }
     }
 
+    // Continuous gesture listeners (no once: true) to ensure AudioContext wakes if device slept or tab switched
     ['touchstart', 'touchend', 'pointerdown', 'click'].forEach(evt => {
-      window.addEventListener(evt, unlockAudio, { once: true, passive: true });
+      window.addEventListener(evt, () => {
+        unlockAudio();
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+      }, { passive: true });
     });
+
+    function playSyntheticSchematicSound(type) {
+      if (!audioCtx || !soundEnabled) return;
+      try {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+        const now = audioCtx.currentTime;
+        if (type === 'snip') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(1400, now);
+          osc.frequency.exponentialRampToValueAtTime(300, now + 0.06);
+          gain.gain.setValueAtTime(0.35, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.06);
+        } else if (type === 'switch') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(800, now);
+          osc.frequency.exponentialRampToValueAtTime(200, now + 0.05);
+          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.05);
+        } else if (type === 'button') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(450, now);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.05);
+        } else if (type === 'chime') {
+          [523.25, 659.25, 783.99].forEach((freq, i) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + i * 0.1);
+            gain.gain.setValueAtTime(0.35, now + i * 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.35);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now + i * 0.1);
+            osc.stop(now + i * 0.1 + 0.35);
+          });
+        }
+      } catch (e) {}
+    }
 
     function playSfx(name) {
       if (!soundEnabled) return;
       unlockAudio();
+
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
 
       // Priority 1: Web Audio decoded buffer
       if (audioCtx && audioBuffers[name]) {
@@ -919,14 +1013,23 @@
         } catch (e) {}
       }
 
-      // Priority 2: Direct HTMLAudioElement (no cloneNode leakage)
+      // Priority 2: Direct HTMLAudioElement
       const a = SFX[name];
       if (a) {
         try {
           a.currentTime = 0;
           a.volume = 0.8;
-          a.play().catch(() => {});
-        } catch (e) {}
+          const p = a.play();
+          if (p !== undefined) {
+            p.catch(() => {
+              playSyntheticSchematicSound(name);
+            });
+          }
+        } catch (e) {
+          playSyntheticSchematicSound(name);
+        }
+      } else {
+        playSyntheticSchematicSound(name);
       }
 
       if (navigator.vibrate) {
@@ -1720,10 +1823,10 @@
           • <strong>Texture Badge:</strong> Hidden tactile swatch beside the slot. Blind feels this to identify the wire without vision!
         `;
         specs.innerHTML = `
-          <strong>DIY HARDWARE SPECS:</strong><br>
-          • 10 wooden clothespins (or binder clips)<br>
-          • 6 colored shoelaces (Red, Blue, Yellow, Green, White, Black)<br>
-          • 5 Velcro-backed texture patches<br>
+          <strong>HARDWARE SPECIFICATIONS:</strong><br>
+          • 10 spring clip wire contacts<br>
+          • 6 color-coded tactical wire leads (Red, Blue, Yellow, Green, White, Black)<br>
+          • 5 modular tactile texture swatches<br>
           • Slot pitch: 25mm spacing
         `;
       } else if (type === 'dial') {
@@ -1731,15 +1834,14 @@
         title.textContent = `${extra.name}`;
         desc.innerHTML = `
           <strong>3D SHAPE ROTARY DIAL:</strong><br>
-          Plastic bottle cap with raised foam/cardboard shape (Triangle, Square, Circle) mounted on a brass fastener brad. Rotates in 90° clicks (UP, RIGHT, DOWN, LEFT).<br><br>
-          • <strong>Blind Feedback:</strong> Raised tactile bump on pointer tip.<br>
-          • <strong>Deaf Feedback:</strong> White painted notch visible from distance.
+          Tactical rotary selector with raised geometric profile (Triangle, Square, Circle). Rotates in 90° index detents (UP, RIGHT, DOWN, LEFT).<br><br>
+          • <strong>Blind Feedback:</strong> Raised tactile indexing bump on pointer tip.<br>
+          • <strong>Deaf Feedback:</strong> High-contrast reference notch visible from distance.
         `;
         specs.innerHTML = `
-          <strong>DIY HARDWARE SPECS:</strong><br>
-          • 3 plastic bottle caps<br>
-          • 3 brass paper brads<br>
-          • Raised 3D shapes: ▲ Triangle, ■ Square, ● Circle<br>
+          <strong>HARDWARE SPECIFICATIONS:</strong><br>
+          • 3 indexed rotary dials<br>
+          • Raised tactical shapes: ▲ Triangle, ■ Square, ● Circle<br>
           • Center pitch: 35mm
         `;
       } else if (type === 'switch') {
@@ -1748,12 +1850,12 @@
         desc.innerHTML = `
           <strong>FOUR TOGGLE SWITCHES:</strong><br>
           Numbered 1, 2, 3, 4 from left to right. Set by solving the Serial Number vowel rule and indicator tag modifiers.<br><br>
-          • <strong>Blind Feedback:</strong> Feels lever arm angled UP or DOWN.<br>
+          • <strong>Blind Feedback:</strong> Lever actuator arm angled UP or DOWN.<br>
           • <strong>Deaf Feedback:</strong> Clear visual line of sight.
         `;
         specs.innerHTML = `
-          <strong>DIY HARDWARE SPECS:</strong><br>
-          • 4 cheap mechanical rocker or toggle switches (or popsicle sticks pinned on brads)<br>
+          <strong>HARDWARE SPECIFICATIONS:</strong><br>
+          • 4 mechanical toggle switches (or pivoted lever actuators)<br>
           • Switch pitch: 25mm spacing
         `;
       } else if (type === 'chamber') {
@@ -1761,14 +1863,14 @@
         title.textContent = `MYSTERY SENSORY CHAMBER`;
         desc.innerHTML = `
           <strong>10cm × 10cm SENSORY BOX HOLE:</strong><br>
-          Cut into the right-hand panel of the bomb. Blind reaches their arm inside without seeing, feeling the single hidden object.<br><br>
+          Access port integrated into right-hand panel of casing. Blind reaches arm inside without line of sight, identifying the single concealed object.<br><br>
           • <strong>Active Object:</strong> <strong>${activeObjectKey}</strong><br>
-          • <strong>Cover Flap:</strong> Dark sock sleeve prevents any teammate from peeking.
+          • <strong>Cover Flap:</strong> Light-blocking textile baffle prevents optical reconnaissance.
         `;
         specs.innerHTML = `
-          <strong>DIY HARDWARE SPECS:</strong><br>
-          • 10cm × 10cm cut-out with taped edges<br>
-          • 1 dark tube sock or felt flap sleeve<br>
+          <strong>HARDWARE SPECIFICATIONS:</strong><br>
+          • 10cm × 10cm port aperture<br>
+          • Light-blocking tactile baffle sleeve<br>
           • 5 Objects: Key, Battery, Spiky Ball, Wood Block, Padlock
         `;
       } else if (type === 'clues') {

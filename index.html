@@ -438,34 +438,6 @@
       padding-top: 0.9rem;
     }
 
-    /* Audio unlock banner */
-    .audio-unlock-banner {
-      width: 100%;
-      max-width: 1100px;
-      background: linear-gradient(90deg, rgba(255, 170, 0, 0.22), rgba(255, 170, 0, 0.08));
-      border: 1px solid var(--led-amber);
-      color: var(--led-amber);
-      padding: 0.65rem 1rem;
-      border-radius: 6px;
-      font-family: var(--font-display);
-      font-size: 0.85rem;
-      letter-spacing: 1px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-      cursor: pointer;
-      margin-bottom: 0.9rem;
-      animation: pulseBanner 2.2s infinite ease-in-out;
-      touch-action: manipulation;
-    }
-    .audio-unlock-banner.hidden {
-      display: none;
-    }
-    @keyframes pulseBanner {
-      0%, 100% { box-shadow: 0 0 10px rgba(255,170,0,0.2); }
-      50% { box-shadow: 0 0 24px rgba(255,170,0,0.55); }
-    }
 
     .header-actions {
       display: flex;
@@ -635,14 +607,6 @@
 </head>
 <body>
 
-  <div id="audioUnlockBanner" class="audio-unlock-banner" onclick="unlockAudio()">
-    <div style="display:flex; align-items:center; gap:0.5rem;">
-      <span style="font-size:1.15rem;">🔊</span>
-      <span><strong>TAP TO ACTIVATE MISSION AUDIO</strong> (Mobile Browser Requirement)</span>
-    </div>
-    <span style="border:1px solid currentColor; padding:0.25rem 0.6rem; border-radius:4px; font-weight:700; font-size:0.75rem;">ENABLE AUDIO</span>
-  </div>
-
   <header>
     <div class="brand">
       <div id="statusOrb" class="status-orb"></div>
@@ -749,7 +713,7 @@
 
   <footer>
     <span>HOTKEYS: [SPACE] ARM/PAUSE · [X] STRIKE · [C] SOLVE CHIME · [V] DEFUSED · [R] RESET · [N/P] SEEDS</span>
-    <span>ORIGINAL KTANE SOUND SYSTEM // MOBILE OPTIMIZED</span>
+    <span>ORDNANCE DISPOSAL UNIT // TACTICAL CONSOLE</span>
   </footer>
 
   <script>
@@ -802,6 +766,8 @@
     let isMuted = false;
     let emergencyActive = false;
     let audioUnlocked = false;
+    let keepAliveNode = null;
+    let emergencySource = null;
 
     function initAudioContext() {
       if (!audioCtx && AudioContextClass) {
@@ -811,7 +777,23 @@
       }
     }
 
-    function preloadWebAudioBuffers() {
+    function safeDecodeAudio(ab) {
+      return new Promise((resolve, reject) => {
+        if (!audioCtx) return reject(new Error('No AudioContext'));
+        try {
+          const res = audioCtx.decodeAudioData(ab, resolve, reject);
+          if (res && typeof res.then === 'function') {
+            res.then(resolve).catch(reject);
+          }
+        } catch (e) {
+          reject(e);
+        }
+      });
+    }
+
+    // Immediately initiate preloading on script execution so buffers are decoded before first user tap
+    function preloadAllAudioBuffers() {
+      initAudioContext();
       if (!audioCtx) return;
       Object.entries(SFX_MAP).forEach(([key, url]) => {
         if (audioBuffers[key]) return;
@@ -820,78 +802,82 @@
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             return res.arrayBuffer();
           })
-          .then(ab => audioCtx.decodeAudioData(ab))
-          .then(decoded => { audioBuffers[key] = decoded; })
+          .then(ab => safeDecodeAudio(ab))
+          .then(decoded => {
+            audioBuffers[key] = decoded;
+          })
           .catch(() => {});
       });
     }
+
+    preloadAllAudioBuffers();
 
     function unlockAudio() {
       initAudioContext();
       if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume().catch(() => {});
       }
-      if (!audioUnlocked && audioCtx) {
-        try {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          gain.gain.value = 0.001;
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.start();
-          osc.stop(audioCtx.currentTime + 0.002);
-        } catch (e) {}
-      }
 
-      if (!audioUnlocked) {
-        audioUnlocked = true;
-        const banner = document.getElementById('audioUnlockBanner');
-        if (banner) {
-          banner.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
-          banner.style.opacity = '0';
-          banner.style.transform = 'translateY(-10px)';
-          setTimeout(() => banner.classList.add('hidden'), 320);
-        }
-        preloadWebAudioBuffers();
-        // Prime HTML5 Audio elements
+      if (!audioUnlocked && audioCtx) {
+        // Play microscopic silent buffer to unlock iOS Safari hardware output pipeline
+        try {
+          const buffer = audioCtx.createBuffer(1, 1, 22050);
+          const source = audioCtx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(audioCtx.destination);
+          source.start(0);
+          audioUnlocked = true;
+        } catch (e) {}
+
+        // Keep-alive silent loop to prevent mobile browsers from idling the audio subsystem
+        try {
+          if (!keepAliveNode && audioCtx) {
+            const silence = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+            keepAliveNode = audioCtx.createBufferSource();
+            keepAliveNode.buffer = silence;
+            keepAliveNode.loop = true;
+            keepAliveNode.connect(audioCtx.destination);
+            keepAliveNode.start(0);
+          }
+        } catch (e) {}
+
+        // Prime HTML5 Audio elements with .load() without flooding the browser with mass .play() calls
         Object.values(SFX).forEach(audio => {
           try {
-            audio.muted = true;
-            const p = audio.play();
-            if (p !== undefined) {
-              p.then(() => {
-                audio.pause();
-                audio.currentTime = 0;
-                audio.muted = false;
-              }).catch(() => { audio.muted = false; });
-            } else {
-              audio.muted = false;
-            }
-          } catch (e) {
-            audio.muted = false;
-          }
+            audio.load();
+          } catch (e) {}
         });
+
         if (navigator.vibrate) {
-          try { navigator.vibrate(30); } catch (e) {}
+          try { navigator.vibrate(25); } catch (e) {}
         }
       }
     }
 
+    // Continuous gesture listeners (no once: true) to ensure AudioContext wakes if device slept or tab switched
     ['touchstart', 'touchend', 'pointerdown', 'click', 'keydown'].forEach(evt => {
-      window.addEventListener(evt, unlockAudio, { once: true, passive: true });
+      window.addEventListener(evt, () => {
+        unlockAudio();
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+      }, { passive: true });
     });
 
     // Synthetic audio fallback for offline or failed sound decodes
     function playSyntheticSound(type) {
       if (!audioCtx || isMuted) return;
       try {
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
         const now = audioCtx.currentTime;
         if (type === 'tick') {
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
           osc.type = 'sine';
           osc.frequency.setValueAtTime(880, now);
-          gain.gain.setValueAtTime(0.3, now);
+          gain.gain.setValueAtTime(0.35, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
           osc.connect(gain);
           gain.connect(audioCtx.destination);
@@ -902,7 +888,7 @@
           const gain = audioCtx.createGain();
           osc.type = 'sawtooth';
           osc.frequency.setValueAtTime(140, now);
-          gain.gain.setValueAtTime(0.6, now);
+          gain.gain.setValueAtTime(0.65, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
           osc.connect(gain);
           gain.connect(audioCtx.destination);
@@ -921,15 +907,49 @@
             osc.start(now + i * 0.1);
             osc.stop(now + i * 0.1 + 0.4);
           });
+        } else if (type === 'explode') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(120, now);
+          osc.frequency.exponentialRampToValueAtTime(25, now + 0.7);
+          gain.gain.setValueAtTime(0.85, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.7);
+        } else if (type === 'click') {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(1100, now);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(now);
+          osc.stop(now + 0.04);
         }
       } catch (e) {}
     }
 
+    function playSyntheticFallback(key) {
+      if (key.includes('beep')) playSyntheticSound('tick');
+      else if (key === 'strike') playSyntheticSound('strike');
+      else if (key === 'chime' || key === 'defused' || key === 'fanfare') playSyntheticSound('chime');
+      else if (key === 'explode') playSyntheticSound('explode');
+      else if (key === 'snip' || key === 'switch' || key === 'button') playSyntheticSound('click');
+    }
+
     function playSoundKey(key, vol = 1.0) {
       if (isMuted) return;
-      unlockAudio();
 
-      // Priority 1: Web Audio preloaded buffer (zero-latency, no clone memory leak)
+      if (audioCtx && audioCtx.state === 'suspended') {
+        audioCtx.resume().catch(() => {});
+      }
+
+      // Priority 1: Web Audio pre-decoded buffer (instant, zero-latency, reliable on mobile)
       if (audioCtx && audioBuffers[key]) {
         try {
           const src = audioCtx.createBufferSource();
@@ -943,28 +963,27 @@
         } catch (e) {}
       }
 
-      // Priority 2: Preloaded HTML5 Audio element
+      // Priority 2: HTML5 Audio element fallback
       const audioObj = SFX[key];
       if (audioObj) {
         try {
           audioObj.currentTime = 0;
-          audioObj.volume = vol;
-          audioObj.play().catch(() => {
-            // Priority 3: Synthetic fallback if blocked
-            if (key.includes('beep')) playSyntheticSound('tick');
-            else if (key === 'strike') playSyntheticSound('strike');
-            else if (key === 'chime') playSyntheticSound('chime');
-          });
+          audioObj.volume = Math.max(0, Math.min(1.0, vol));
+          const p = audioObj.play();
+          if (p !== undefined) {
+            p.catch(() => {
+              playSyntheticFallback(key);
+            });
+          }
+          return;
         } catch (err) {
-          if (key.includes('beep')) playSyntheticSound('tick');
-          else if (key === 'strike') playSyntheticSound('strike');
-          else if (key === 'chime') playSyntheticSound('chime');
+          playSyntheticFallback(key);
+          return;
         }
-      } else {
-        if (key.includes('beep')) playSyntheticSound('tick');
-        else if (key === 'strike') playSyntheticSound('strike');
-        else if (key === 'chime') playSyntheticSound('chime');
       }
+
+      // Priority 3: Synthetic oscillator fallback
+      playSyntheticFallback(key);
     }
 
     function playSound(audioObj, vol = 1.0) {
@@ -984,6 +1003,7 @@
     }
 
     function playSfx(type) {
+      unlockAudio();
       playSoundKey(type, 0.9);
       if (navigator.vibrate) {
         try { navigator.vibrate(25); } catch (e) {}
@@ -991,6 +1011,7 @@
     }
 
     function playModuleSolve() {
+      unlockAudio();
       playSoundKey('chime', 0.95);
       if (navigator.vibrate) {
         try { navigator.vibrate([40, 40, 60]); } catch (e) {}
@@ -1001,19 +1022,52 @@
       if (isMuted || emergencyActive || gameEnded) return;
       emergencyActive = true;
       document.body.classList.add('emergency-alarm');
-      SFX.emergency.currentTime = 0;
-      SFX.emergency.volume = 0.65;
-      SFX.emergency.play().catch(() => {});
+
+      // Priority 1: Web Audio looping buffer (reliable in timer loop on mobile)
+      if (audioCtx && audioBuffers['emergency']) {
+        try {
+          if (emergencySource) {
+            try { emergencySource.stop(); } catch (e) {}
+          }
+          emergencySource = audioCtx.createBufferSource();
+          emergencySource.buffer = audioBuffers['emergency'];
+          emergencySource.loop = true;
+          const gainNode = audioCtx.createGain();
+          gainNode.gain.value = 0.65;
+          emergencySource.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          emergencySource.start(0);
+          return;
+        } catch (e) {}
+      }
+
+      // Priority 2: HTML5 audio loop fallback
+      try {
+        SFX.emergency.currentTime = 0;
+        SFX.emergency.volume = 0.65;
+        SFX.emergency.loop = true;
+        SFX.emergency.play().catch(() => {});
+      } catch (e) {}
     }
 
     function stopEmergencyAlarm() {
       emergencyActive = false;
       document.body.classList.remove('emergency-alarm');
-      SFX.emergency.pause();
-      SFX.emergency.currentTime = 0;
+      if (emergencySource) {
+        try {
+          emergencySource.stop();
+          emergencySource.disconnect();
+        } catch (e) {}
+        emergencySource = null;
+      }
+      try {
+        SFX.emergency.pause();
+        SFX.emergency.currentTime = 0;
+      } catch (e) {}
     }
 
     function toggleEmergencyAlarm() {
+      unlockAudio();
       if (emergencyActive) {
         stopEmergencyAlarm();
       } else {
@@ -1049,11 +1103,11 @@
     function playVocalBeep() {
       if (isMuted) return;
       if (strikes === 0) {
-        playSound(SFX.doublebeep, 0.9);
+        playSoundKey('doublebeep', 0.9);
       } else if (strikes === 1) {
-        playSound(SFX.doublebeep125, 0.92);
+        playSoundKey('doublebeep125', 0.92);
       } else {
-        playSound(SFX.singlebeep, 0.95);
+        playSoundKey('singlebeep', 0.95);
       }
     }
 
@@ -1102,6 +1156,7 @@
     }
 
     function toggleTimer() {
+      unlockAudio();
       if (gameEnded) return;
 
       if (timerRunning) {
@@ -1127,6 +1182,7 @@
     }
 
     function triggerStrike() {
+      unlockAudio();
       if (gameEnded) return;
 
       strikes++;
@@ -1139,17 +1195,18 @@
 
       if (strikes === 1) {
         cell1.classList.add('lit');
-        playSound(SFX.strike, 1.0);
+        playSoundKey('strike', 1.0);
       } else if (strikes === 2) {
         cell2.classList.add('lit');
-        playSound(SFX.strike, 1.0);
+        playSoundKey('strike', 1.0);
       } else if (strikes >= 3) {
-        playSound(SFX.strike, 1.0);
+        playSoundKey('strike', 1.0);
         detonateBomb();
       }
     }
 
     function undoStrike() {
+      unlockAudio();
       if (gameEnded || strikes <= 0) return;
       if (strikes === 2) cell2.classList.remove('lit');
       if (strikes === 1) cell1.classList.remove('lit');
@@ -1195,13 +1252,12 @@
       btnArmLabel.textContent = 'EXPLODED';
 
       if (!isMuted) {
-        SFX.explode.currentTime = 0;
-        SFX.explode.volume = 1.0;
-        SFX.explode.play().catch(() => {});
+        playSoundKey('explode', 1.0);
       }
     }
 
     function triggerDefused() {
+      unlockAudio();
       if (gameEnded) return;
       gameEnded = true;
       timerRunning = false;
@@ -1216,20 +1272,17 @@
       btnArmLabel.textContent = 'DISARMED';
 
       if (!isMuted) {
-        SFX.defused.currentTime = 0;
-        SFX.defused.volume = 1.0;
-        SFX.defused.play().catch(() => {});
+        playSoundKey('defused', 1.0);
         setTimeout(() => {
           if (gameEnded && document.body.classList.contains('state-defused') && !isMuted) {
-            SFX.fanfare.currentTime = 0;
-            SFX.fanfare.volume = 0.9;
-            SFX.fanfare.play().catch(() => {});
+            playSoundKey('fanfare', 0.9);
           }
         }, 1600);
       }
     }
 
     function resetSystem() {
+      unlockAudio();
       if (animId) cancelAnimationFrame(animId);
       stopEmergencyAlarm();
 
@@ -1259,12 +1312,17 @@
     }
 
     function toggleMute() {
+      unlockAudio();
       isMuted = !isMuted;
       document.getElementById('muteBtn').textContent = isMuted ? 'UNMUTE [M]' : 'MUTE [M]';
       if (isMuted) {
+        if (emergencySource) {
+          try { emergencySource.stop(); } catch (e) {}
+          emergencySource = null;
+        }
         SFX.emergency.pause();
       } else if (emergencyActive && timerRunning) {
-        SFX.emergency.play().catch(() => {});
+        startEmergencyAlarm();
       }
     }
 
