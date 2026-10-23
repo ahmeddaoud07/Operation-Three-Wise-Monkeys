@@ -840,7 +840,6 @@
 
     let soundEnabled = true;
     let audioUnlocked = false;
-    let html5Unlocked = false;
     let keepAliveNode = null;
 
     // Silent media track to bridge iOS WebKit into 'playback' media channel (bypasses iPhone silent/mute switch)
@@ -962,27 +961,6 @@
           }
         } catch (e) {}
 
-        // Prime HTML5 Audio elements safely within user gesture (wait for play promise before pause to prevent AbortError)
-        if (!html5Unlocked) {
-          html5Unlocked = true;
-          Object.values(SFX).forEach(audio => {
-            try {
-              audio.volume = 0;
-              const p = audio.play();
-              if (p !== undefined) {
-                p.then(() => {
-                  audio.pause();
-                  audio.currentTime = 0;
-                  audio.volume = 0.8;
-                }).catch(() => {});
-              }
-            } catch (e) {}
-          });
-        }
-
-        if (navigator.vibrate) {
-          try { navigator.vibrate(25); } catch (e) {}
-        }
       }
 
       // Decode any preloaded buffers now that AudioContext is active
