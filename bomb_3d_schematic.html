@@ -812,7 +812,12 @@
 
   <script>
     /* =========================================================================
-       AUDIO SOUND EFFECTS (Web Audio API + HTMLAudioElement Fallback)
+       AUDIO SOUND EFFECTS (Resilient Web Audio API + HTMLAudioElement Fallback)
+       - ArrayBuffer preloading & zero-latency Web Audio decoding
+       - iOS hardware silent switch bypass via HTML5 media session bridge
+       - Web Audio Session API (navigator.audioSession.type = 'playback')
+       - Continuous user gesture & visibilitychange wake loops
+       - Full synthetic oscillator fallback
        ========================================================================= */
     const SFX_FILES = {
       snip: 'audio/WireSnip.wav',
@@ -823,6 +828,7 @@
 
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
+    const rawAudioBuffers = {};
     const audioBuffers = {};
 
     const SFX = {
@@ -834,7 +840,26 @@
 
     let soundEnabled = true;
     let audioUnlocked = false;
+    let html5Unlocked = false;
     let keepAliveNode = null;
+
+    // Silent media track to bridge iOS WebKit into 'playback' media channel (bypasses iPhone silent/mute switch)
+    const SILENT_MP3_DATA = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU2LjM2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABhQcHBw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PAAAAIExhbWUzLjk5LjVVVVVVVVVVVVVVVVVVVVVVVVVVV//OEAFAAAAAAIlVNQAAAA==';
+    let silentMediaAudio = null;
+    let silentMediaUnlocked = false;
+
+    function initSilentMedia() {
+      if (!silentMediaAudio) {
+        try {
+          silentMediaAudio = new Audio(SILENT_MP3_DATA);
+          silentMediaAudio.setAttribute('x-webkit-airplay', 'deny');
+          silentMediaAudio.setAttribute('playsinline', '');
+          silentMediaAudio.preload = 'auto';
+          silentMediaAudio.loop = true;
+          silentMediaAudio.volume = 0.01;
+        } catch (e) {}
+      }
+    }
 
     function initAudioContext() {
       if (!audioCtx && AudioContextClass) {
@@ -844,47 +869,78 @@
       }
     }
 
-    function safeDecodeAudio(ab) {
-      return new Promise((resolve, reject) => {
-        if (!audioCtx) return reject(new Error('No AudioContext'));
-        try {
-          const res = audioCtx.decodeAudioData(ab, resolve, reject);
-          if (res && typeof res.then === 'function') {
-            res.then(resolve).catch(reject);
-          }
-        } catch (e) {
-          reject(e);
+    function decodeSingleBuffer(key) {
+      if (!audioCtx || !rawAudioBuffers[key] || audioBuffers[key]) return;
+      try {
+        const copy = rawAudioBuffers[key].slice(0);
+        const res = audioCtx.decodeAudioData(
+          copy,
+          decoded => {
+            audioBuffers[key] = decoded;
+          },
+          () => {}
+        );
+        if (res && typeof res.then === 'function') {
+          res.then(decoded => {
+            audioBuffers[key] = decoded;
+          }).catch(() => {});
+        }
+      } catch (e) {}
+    }
+
+    function decodeAllAudioBuffers() {
+      if (!audioCtx || audioCtx.state !== 'running') return;
+      Object.keys(SFX_FILES).forEach(key => {
+        if (!audioBuffers[key] && rawAudioBuffers[key]) {
+          decodeSingleBuffer(key);
         }
       });
     }
 
-    function preloadWebAudio() {
-      initAudioContext();
-      if (!audioCtx) return;
+    function preloadAllAudioFiles() {
       Object.entries(SFX_FILES).forEach(([key, url]) => {
-        if (audioBuffers[key]) return;
+        if (rawAudioBuffers[key]) return;
         fetch(url)
           .then(res => {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             return res.arrayBuffer();
           })
-          .then(buf => safeDecodeAudio(buf))
-          .then(decoded => { audioBuffers[key] = decoded; })
+          .then(ab => {
+            rawAudioBuffers[key] = ab;
+            if (audioCtx && audioCtx.state === 'running' && !audioBuffers[key]) {
+              decodeSingleBuffer(key);
+            }
+          })
           .catch(() => {});
       });
     }
 
-    // Immediately initiate preloading on script execution so buffers are decoded before first user tap
-    preloadWebAudio();
+    preloadAllAudioFiles();
 
     function unlockAudio() {
+      // 1. Force modern iOS Web Audio session to media playback channel (iOS 16.4+)
+      if ('audioSession' in navigator) {
+        try { navigator.audioSession.type = 'playback'; } catch (e) {}
+      }
+
+      // 2. Instantiate and resume Web Audio AudioContext
       initAudioContext();
       if (audioCtx && audioCtx.state === 'suspended') {
         audioCtx.resume().catch(() => {});
       }
 
+      // 3. Force iOS Safari media channel open via looping silent HTML5 media (bypasses hardware mute switch on older iOS)
+      initSilentMedia();
+      if (!silentMediaUnlocked && silentMediaAudio) {
+        try {
+          silentMediaAudio.play().then(() => {
+            silentMediaUnlocked = true;
+          }).catch(() => {});
+        } catch (e) {}
+      }
+
       if (!audioUnlocked && audioCtx) {
-        // Play microscopic silent buffer to unlock iOS Safari hardware output pipeline
+        // Play microscopic 1-sample silent buffer to unlock iOS hardware pipeline
         try {
           const buffer = audioCtx.createBuffer(1, 1, 22050);
           const source = audioCtx.createBufferSource();
@@ -906,27 +962,53 @@
           }
         } catch (e) {}
 
-        // Prime HTML5 Audio elements with .load() without flooding the browser with mass .play() calls
-        Object.values(SFX).forEach(audio => {
-          try {
-            audio.load();
-          } catch (e) {}
-        });
+        // Prime HTML5 Audio elements safely within user gesture (wait for play promise before pause to prevent AbortError)
+        if (!html5Unlocked) {
+          html5Unlocked = true;
+          Object.values(SFX).forEach(audio => {
+            try {
+              audio.volume = 0;
+              const p = audio.play();
+              if (p !== undefined) {
+                p.then(() => {
+                  audio.pause();
+                  audio.currentTime = 0;
+                  audio.volume = 0.8;
+                }).catch(() => {});
+              }
+            } catch (e) {}
+          });
+        }
 
         if (navigator.vibrate) {
           try { navigator.vibrate(25); } catch (e) {}
         }
       }
+
+      // Decode any preloaded buffers now that AudioContext is active
+      decodeAllAudioBuffers();
     }
 
     // Continuous gesture listeners (no once: true) to ensure AudioContext wakes if device slept or tab switched
-    ['touchstart', 'touchend', 'pointerdown', 'click'].forEach(evt => {
+    ['touchstart', 'touchend', 'pointerdown', 'click', 'keydown'].forEach(evt => {
       window.addEventListener(evt, () => {
         unlockAudio();
         if (audioCtx && audioCtx.state === 'suspended') {
           audioCtx.resume().catch(() => {});
         }
       }, { passive: true });
+    });
+
+    // Page visibility listener to recover audio session when tab returns to foreground
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        if (audioCtx && audioCtx.state === 'suspended') {
+          audioCtx.resume().catch(() => {});
+        }
+        if (silentMediaAudio && silentMediaUnlocked && silentMediaAudio.paused) {
+          silentMediaAudio.play().catch(() => {});
+        }
+      }
     });
 
     function playSyntheticSchematicSound(type) {
@@ -1011,6 +1093,11 @@
           }
           return;
         } catch (e) {}
+      }
+
+      // If raw buffer is downloaded but not yet decoded, kick off decode for subsequent plays
+      if (audioCtx && rawAudioBuffers[name] && !audioBuffers[name]) {
+        decodeSingleBuffer(name);
       }
 
       // Priority 2: Direct HTMLAudioElement
