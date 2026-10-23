@@ -8,9 +8,9 @@
     "deploy": "vercel --prod"
   },
   "keywords": [
-    "ktane",
     "bomb-defusal",
     "cooperative-game",
+    "tactical-console",
     "threejs",
     "webgl",
     "hardware-schematic"

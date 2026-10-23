@@ -1,10 +1,10 @@
-# PROJECT MAP — Operation: Three Wise Monkeys
+# PROJECT MAP — Eidolon Monkey Game
 
 ## Overview
-Physical 3-player + 1 Game Master cooperative bomb defusal game inspired by *Keep Talking and Nobody Explodes*, featuring sensory handicaps (**Mute**, **Deaf**, **Blind**) and a 5-minute countdown console.
+Physical 3-player + 1 Game Master cooperative bomb defusal game featuring sensory handicaps (**Mute**, **Deaf**, **Blind**), a 3D hardware CAD schematic, and a 5-minute countdown console.
 
 ## Key Files & Roles
-- [`index.html`](file:///D:/melle/antigrav/bomb%20game%20L/index.html): Standalone offline Game Master countdown timer & soundboard console. Loads authentic vanilla *Keep Talking and Nobody Explodes* audio assets from `audio/` and manages the 5:00 timer, strike speed multipliers (`1.0x`, `1.25x`, `1.5x`), and 12 Seed configurations (`#01 ALPHA` – `#12 LIMA`).
+- [`index.html`](file:///D:/melle/antigrav/bomb%20game%20L/index.html): Standalone offline Game Master countdown timer & soundboard console. Manages the 5:00 timer, strike speed multipliers (`1.0x`, `1.25x`, `1.5x`), sound effects, and 12 Seed configurations (`#01 ALPHA` – `#12 LIMA`).
 - [`bomb_3d_schematic.html`](file:///D:/melle/antigrav/bomb%20game%20L/bomb_3d_schematic.html): Full interactive 3D WebGL hardware schematic and CAD guide with 360° orbit, exploded assembly slider, X-ray/wireframe modes, 3D dimension lines, clickable components (cut wires, flip switches, rotate shape dials), mystery chamber swapper, and real-time seed syncing.
 - `lib/`: Offline standalone 3D engine libraries (`three.min.js`, `OrbitControls.js`).
 - [`BOMB_DEFUSAL_MANUAL_PRINTABLE.html`](file:///D:/melle/antigrav/bomb%20game%20L/BOMB_DEFUSAL_MANUAL_PRINTABLE.html): 5-page printable HTML manual (Pages 1–4 for the Mute player; Page 5 detachable GM Answer Key).
