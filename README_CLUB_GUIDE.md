@@ -56,7 +56,7 @@
 
 ### Shopping List (Materials)
 1. **The Box:** 1 sturdy corrugated shipping box or boot box (~30cm × 25cm × 15cm).
-2. **Wires & Clips:** 10 wooden clothespins (or binder clips) + 6 colored shoelaces or thick yarn cords (**Red, Blue, Yellow, Green, White, Black**).
+2. **Wires & Clips:** 10 wooden clothespins (or binder clips) + 6 colored shoelaces or thick yarn cords (**Red, Blue, Yellow, Green, Pink, Black**).
 3. **5 Texture Badges (2"×2" cardboard squares with Velcro on the back):**
    * **Sandpaper** (rough)
    * **Sponge** (soft, porous kitchen/craft sponge)
