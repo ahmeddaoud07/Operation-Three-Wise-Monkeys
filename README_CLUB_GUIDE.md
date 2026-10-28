@@ -59,7 +59,7 @@
 2. **Wires & Clips:** 10 wooden clothespins (or binder clips) + 6 colored shoelaces or thick yarn cords (**Red, Blue, Yellow, Green, White, Black**).
 3. **5 Texture Badges (2"×2" cardboard squares with Velcro on the back):**
    * **Sandpaper** (rough)
-   * **Bubble Wrap** (poppable bubbles)
+   * **Sponge** (soft, porous kitchen/craft sponge)
    * **Metal Coin** (a large coin glued flat to cardboard)
    * **Soft Felt** (fuzzy cloth/fleece)
    * **Ribbed Cardboard** (peel the top layer off corrugated cardboard to expose the wavy ridges)
@@ -86,7 +86,7 @@
       │  MODULE 1: 5 TACTILE WIRES (Top = Slot 1, Bottom = Slot 5)    │
       │                                                               │
       │  SLOT 1: [ Sandpaper   ]  📎════════( WIRE 1 )════════📎      │
-      │  SLOT 2: [ Bubble Wrap ]  📎════════( WIRE 2 )════════📎      │
+      │  SLOT 2: [ Sponge      ]  📎════════( WIRE 2 )════════📎      │
       │  SLOT 3: [ Metal Coin  ]  📎════════( WIRE 3 )════════📎  ┌───┤
       │  SLOT 4: [ Soft Felt   ]  📎════════( WIRE 4 )════════📎  │ H │
       │  SLOT 5: [ Ribbed Card ]  📎════════( WIRE 5 )════════📎  │ O │

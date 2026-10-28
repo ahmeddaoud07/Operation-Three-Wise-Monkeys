@@ -1281,6 +1281,55 @@
       return new THREE.CanvasTexture(c);
     }
 
+    function makeSpongeTexture() {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 256;
+      const ctx = c.getContext('2d');
+      // Porous sponge vibrant yellow base
+      ctx.fillStyle = '#f5c832';
+      ctx.fillRect(0, 0, 256, 256);
+
+      // Micro-pore texture noise
+      for (let i = 0; i < 14000; i++) {
+        const x = Math.random() * 256, y = Math.random() * 256;
+        ctx.fillStyle = Math.random() > 0.5 ? 'rgba(190, 130, 20, 0.4)' : 'rgba(255, 245, 175, 0.5)';
+        ctx.fillRect(x, y, Math.random() > 0.85 ? 2 : 1, Math.random() > 0.85 ? 2 : 1);
+      }
+
+      // Organic cellular voids (pores) with shadow & depth highlights
+      for (let p = 0; p < 80; p++) {
+        const px = Math.random() * 244 + 6;
+        const py = Math.random() * 244 + 6;
+        const r = Math.random() * 5.5 + 1.5;
+        const rx = r * (0.8 + Math.random() * 0.4);
+        const ry = r * (0.8 + Math.random() * 0.4);
+        const rot = Math.random() * Math.PI;
+
+        // Dark cavity interior
+        ctx.beginPath();
+        ctx.ellipse(px, py, rx, ry, rot, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(80, 48, 8, 0.85)';
+        ctx.fill();
+
+        // Deepest center core
+        ctx.beginPath();
+        ctx.ellipse(px + 0.4, py + 0.4, rx * 0.55, ry * 0.55, rot, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(45, 22, 2, 0.9)';
+        ctx.fill();
+
+        // 3D highlight rim around upper edge
+        ctx.beginPath();
+        ctx.arc(px - rx * 0.35, py - ry * 0.35, rx * 0.4, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 250, 210, 0.6)';
+        ctx.fill();
+      }
+
+      const tex = new THREE.CanvasTexture(c);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.wrapT = THREE.RepeatWrapping;
+      return tex;
+    }
+
     function makeFeltTexture() {
       const c = document.createElement('canvas');
       c.width = 256; c.height = 256;
@@ -1603,7 +1652,7 @@
     const wireObjects = [];
     const textureObjects = [];
     const wireColorsHex = [0xff2222, 0x2266ff, 0xffbb00, 0x00cc44, 0xeeeeee, 0x111111];
-    const textureTypes = ['SANDPAPER', 'BUBBLE_WRAP', 'METAL_COIN', 'SOFT_FELT', 'RIBBED_CARD'];
+    const textureTypes = ['SANDPAPER', 'SPONGE', 'METAL_COIN', 'SOFT_FELT', 'RIBBED_CARD'];
 
     for (let w = 0; w < 5; w++) {
       const yPos = 3.6 - w * 1.8;
@@ -1615,8 +1664,15 @@
       const badgeGeo = new THREE.BoxGeometry(2.4, 1.4, 0.25);
       let badgeMat;
       if (w === 0) badgeMat = new THREE.MeshStandardMaterial({ map: makeSandpaperTexture() });
-      else if (w === 1) { // Bubble wrap with 6 bumps
-        badgeMat = new THREE.MeshStandardMaterial({ color: 0x88ccff, roughness: 0.1, transparent: true, opacity: 0.75 });
+      else if (w === 1) { // Porous sponge badge with cellular canvas texture
+        const spongeTex = makeSpongeTexture();
+        badgeMat = new THREE.MeshStandardMaterial({
+          map: spongeTex,
+          bumpMap: spongeTex,
+          bumpScale: 0.12,
+          roughness: 0.96,
+          metalness: 0.02
+        });
       } else if (w === 2) badgeMat = matBrass;
       else if (w === 3) badgeMat = new THREE.MeshStandardMaterial({ map: makeFeltTexture() });
       else badgeMat = new THREE.MeshStandardMaterial({ map: makeCardboardTexture() });
@@ -1625,12 +1681,18 @@
       badge.position.set(-11.5, 0, 0.12);
       rowGroup.add(badge);
 
-      if (w === 1) { // Add 3D bubble bumps
-        for (let bx = -0.7; bx <= 0.7; bx += 0.7) {
-          const bumpGeo = new THREE.SphereGeometry(0.24, 8, 8);
-          const bump = new THREE.Mesh(bumpGeo, badgeMat);
-          bump.position.set(-11.5 + bx, 0, 0.28);
-          rowGroup.add(bump);
+      if (w === 1) { // Add 3D sponge cellular pore indentations
+        for (let sx = -0.75; sx <= 0.75; sx += 0.38) {
+          for (let sy = -0.38; sy <= 0.38; sy += 0.38) {
+            if (Math.random() > 0.25) {
+              const poreGeo = new THREE.CylinderGeometry(0.09 + Math.random() * 0.05, 0.05, 0.12, 8);
+              const poreMat = new THREE.MeshStandardMaterial({ color: 0x5a3406, roughness: 1.0 });
+              const pore = new THREE.Mesh(poreGeo, poreMat);
+              pore.rotation.x = Math.PI / 2;
+              pore.position.set(-11.5 + sx + (Math.random() - 0.5) * 0.12, sy + (Math.random() - 0.5) * 0.12, 0.22);
+              rowGroup.add(pore);
+            }
+          }
         }
       } else if (w === 2) { // Add coin relief
         const coinGeo = new THREE.CylinderGeometry(0.55, 0.55, 0.15, 16);
